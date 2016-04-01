@@ -8,8 +8,6 @@ import (
 	"net"
 	"strconv"
 	"time"
-
-	"../config"
 )
 
 type anonConnection struct {
@@ -30,6 +28,12 @@ const (
 	TYPE_ACK byte = iota
 	TYPE_DATA
 	TYPE_BEAT
+)
+
+//Some Global variables
+var (
+	BindAddr string
+	BindPort string
 )
 
 func GetDumyBase64FrameIds(framid string) string {
@@ -95,12 +99,8 @@ func NewaAnonConnection(tcp *net.TCPConn) *anonConnection {
 }
 
 func BindAndStartListener() {
-	tcpAddr := &net.TCPAddr{
-
-		IP:   net.ParseIP(config.BindAddr),
-		Port: config.BindPort,
-	}
-	tcpListener, err := net.ListenTCP("tcp", tcpAddr)
+	//Bind to all the network inteface int the system on the same port
+	tcpListener, err := net.Listen("tcp", ":"+BindPort)
 	if err != nil {
 		fmt.Println(" BindAndStartListener", err)
 	}
@@ -108,10 +108,10 @@ func BindAndStartListener() {
 }
 
 //listen for incommng connection
-func HandleClientConnection(tcpListener *net.TCPListener) {
+func HandleClientConnection(tcpListener net.Listener) {
 
 	for {
-		conn, err := tcpListener.AcceptTCP()
+		conn, err := tcpListener.Accept()
 		if err != nil {
 			fmt.Println("Unable to accept connection")
 		}
@@ -122,7 +122,7 @@ func HandleClientConnection(tcpListener *net.TCPListener) {
 
 }
 
-func SendMsg(conn *net.TCPConn) {
+func SendMsg(conn net.Conn) {
 	var MaxFrameLen int = 10
 	count := 1
 	for {
@@ -139,7 +139,7 @@ func SendMsg(conn *net.TCPConn) {
 
 }
 
-func RecvMsg(conn *net.TCPConn) {
+func RecvMsg(conn net.Conn) {
 
 	localClientBuf := make([]byte, 4096)
 	conn.Read(localClientBuf)
@@ -188,5 +188,16 @@ func SimpleClient() {
 
 		}
 
+	}
+}
+
+func Run(inBindAddress string, inBindPort string) {
+	BindAddr = inBindAddress
+	BindPort = inBindPort
+	x := 1
+	for {
+		fmt.Println(string(GetNFrameIds(x)))
+		time.Sleep(3 * time.Second)
+		x++
 	}
 }
