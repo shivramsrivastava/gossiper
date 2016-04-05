@@ -135,6 +135,8 @@ func SendMsg(conn net.Conn) {
 			//reset count
 			count = 1
 		}
+		time.Sleep(time.Duration(rand.Intn(30) + 1) * time.Second)
+		fmt.Printf("Just sent a message to the client\n")
 	}
 
 }
@@ -146,8 +148,10 @@ func RecvMsg(conn net.Conn) {
 	msgType := localClientBuf[0:1]
 
 	if msgType[0] == TYPE_BEAT {
-		//fmt.Printf("its a one heart beat")
-	}
+		fmt.Printf("its a one heart beat")
+	} else {
+		fmt.Printf("Manjunath its a one ot a heart beat, how can you able to do that one?\n")
+}
 
 }
 
@@ -194,6 +198,8 @@ func SimpleClient() {
 func Run(inBindAddress string, inBindPort string) {
 	BindAddr = inBindAddress
 	BindPort = inBindPort
+	
+	go BindAndStartListener()
 	x := 1
 	for {
 		fmt.Println(string(GetNFrameIds(x)))

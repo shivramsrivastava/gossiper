@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	//	"fmt"
+	"fmt"
 	//	"time"
 
 	"./anonlib"
@@ -68,5 +68,7 @@ func main() {
 			time.Sleep(3 * time.Second)
 			x++
 		}*/
+	var v int
+	fmt.Scanf("%d", &v)
 
 }
