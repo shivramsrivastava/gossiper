@@ -10,9 +10,10 @@ import (
 )
 
 type Fake_memberlist struct {
+	ml.Memberlist
 }
 
-func (F_ml *Fake_memberlist) Create(conf *ml.Config) (*ml.Memberlist, error) {
+func Create(conf *ml.Config) (*ml.Memberlist, error) {
 
 	if conf.Logger == nil {
 
@@ -39,6 +40,6 @@ func (F_ml *Fake_memberlist) Leave(tiemout time.Duration) error {
 	return nil
 }
 
-func (F_ml *Fake_memberlist) Members() *ml.Node {
+func (F_ml *Fake_memberlist) Members() []*ml.Node {
 	return nil
 }
