@@ -5,6 +5,8 @@ import (
 )
 
 type delegate struct {
+	glib               *Glib
+	GetBroadcastCalled int
 }
 
 func (d *delegate) NodeMeta(limit int) []byte {
@@ -13,12 +15,16 @@ func (d *delegate) NodeMeta(limit int) []byte {
 }
 
 func (d *delegate) NotifyMsg(buf []byte) {
-	log.Printf("Delegate NotifyMsg() is called")
+	log.Printf("Delegate NotifyMsg() is called %s", string(buf))
 }
 
 func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte {
-	log.Printf("Delegate GetBroadcasts() is called")
-	return [][]byte{}
+	if d.GetBroadcastCalled == 1000 {
+		log.Printf("Delegate GetBroadcasts() is called 1000 times")
+		d.GetBroadcastCalled = 0
+	}
+	d.GetBroadcastCalled++
+	return d.glib.BC.GetBroadcasts(overhead, limit)
 }
 
 func (d *delegate) LocalState(join bool) []byte {

@@ -2,6 +2,7 @@ package glib
 
 import (
 	Q "container/list"
+	"fmt"
 	"log"
 	"time"
 
@@ -19,18 +20,19 @@ type ML_interface interface {
 //Hashi corps memberlist is well tested and is used in consula nd nomad for gossip (SWIM) among different notes in the cluster
 //we want to use a such a well eshtablished library for Mesos Federation
 type Glib struct {
-	list       ML_interface //Main gossiper library
-	Configtype string       //Type of the configfile default or LAN etc.,
-	config     *ml.Config   //They type of config that has been used for this gossiper
-	Name       string       //Name of this cluster or gosiper
-	Zone       string       //Zone an optional value
-	BindPort   int          //The port at which gossiper will bind to
-	M          int          //Number of members those are in the federation
-	Msg        []byte       //Message or Payload that will be passed around among gossipers
-	New        bool         //Is this a new cluster or joining an existing cluster
-	ToJoin     []string     //List of cluster this gossiper can join
-	ToQ        *Q.List      //Messages to be broadcasted to other gossipers
-	FromQ      *Q.List      //Messages recived from other gossipers
+	list       ML_interface             //Main gossiper library
+	Configtype string                   //Type of the configfile default or LAN etc.,
+	config     *ml.Config               //They type of config that has been used for this gossiper
+	BC         *ml.TransmitLimitedQueue //Broadcast queue
+	Name       string                   //Name of this cluster or gosiper
+	Zone       string                   //Zone an optional value
+	BindPort   int                      //The port at which gossiper will bind to
+	M          int                      //Number of members those are in the federation
+	Msg        []byte                   //Message or Payload that will be passed around among gossipers
+	New        bool                     //Is this a new cluster or joining an existing cluster
+	ToJoin     []string                 //List of cluster this gossiper can join
+	ToQ        *Q.List                  //Messages to be broadcasted to other gossipers
+	FromQ      *Q.List                  //Messages recived from other gossipers
 
 }
 
@@ -50,9 +52,15 @@ func (G *Glib) Init() error {
 
 	G.config.BindPort = G.BindPort
 	G.config.Name = G.Name
-	G.config.Delegate = &delegate{}
+	G.config.Delegate = &delegate{glib: G}
 
 	G.list, err = ml.Create(G.config)
+
+	G.BC = &ml.TransmitLimitedQueue{
+		NumNodes: func() int {
+			return len(G.list.Members())
+		},
+	}
 
 	if err != nil {
 		return err
@@ -79,9 +87,8 @@ func (G *Glib) Leave() error {
 
 	if err != nil {
 		log.Printf("Gossiper Leave Error %v", err)
-		return err
-	}
 
+	}
 	return nil
 }
 
@@ -124,6 +131,18 @@ func Run(name string, myport int, isnew bool, others []string) {
 	//go ExamineFramework()
 
 	//wait
+	g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("Initial %s:%v", g.Name, time.Now())))
+	for {
 
-	<-wait
+		select {
+
+		case <-time.After(time.Second * 10):
+			log.Printf("A Second elapsed for %s", g.Name)
+			g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("%s:%v", g.Name, time.Now())))
+
+		case <-wait:
+			log.Printf("End of glib library, terminating")
+			break
+		}
+	}
 }
