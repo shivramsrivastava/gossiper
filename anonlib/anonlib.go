@@ -1,28 +1,17 @@
 package anonlib
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"net"
-	"strconv"
-	"time"
+	"sync"
+
+	"../common"
 )
 
 type anonConnection struct {
-	//*net.TCPConn
-	//*net.TCPAddr
+	*sync.Mutex
 }
-
-//mesg Format
-// type single byte
-// total bytes
-// total frameids
-// data
-//ex
-
-//type PacketType byte
 
 const (
 	TYPE_ACK byte = iota
@@ -36,44 +25,33 @@ var (
 	BindPort string
 )
 
-func GetDumyBase64FrameIds(framid string) string {
-	return base64.StdEncoding.EncodeToString([]byte(framid))
-}
+// GetTheClientData builds the frame-id:bool value byte string
+func BuildClientFrameData(framid string, enable bool) []byte {
 
-func GetTheClientData(framid string, enable int) []byte {
-	tempStr := GetDumyBase64FrameIds(framid) + ":" + strconv.FormatInt(int64(enable), 10)
+	enableStr := "0"
+	if enable == true {
+		enableStr = "1"
+	}
+	tempStr := framid + ":" + enableStr
 	return []byte(tempStr)
 
 }
 
-func GenerateRandomData() []byte {
+// BuildTheClientDataFromMap locks and read the map and build calls the BuildClientFrameData
+func BuildTheClientDataFromMap(M map[string]bool) []byte {
 
-	localFrameId := []string{"REDIS", "CASANDRA", "MONGO-DB", "MSSQL", "IN-FLUXDB"}
-	rand.Seed(int64(time.Now().Nanosecond()))
+	common.ToAnon.Lck.Lock()
+	defer common.ToAnon.Lck.Unlock()
 
-	str := localFrameId[rand.Intn(len(localFrameId))]
-
-	return GetTheClientData(str, rand.Intn(1))
-
-}
-
-func GetNFrameIds(nFrame int) []byte {
 	result := []byte{}
-	for i := 0; i < nFrame; i++ {
-
-		if i != 0 {
-			//skip comma
-			result = append(result, []byte(" ")...)
-		}
-		time.Sleep(time.Second * 1)
-		result = append(result, GenerateRandomData()...)
-
+	for key, value := range M {
+		result = append(result, BuildClientFrameData(key, value)...)
 	}
 
 	return result
 }
 
-func GenerateMsg(msgType byte, data []byte, totalMsgCount int) []byte {
+func GenerateDataMsg(msgType byte, data []byte, totalMsgCount int) []byte {
 
 	//calculate the total byte lenght
 	totalLength := int(len(data) + 4 + 4 + 1)
@@ -83,19 +61,16 @@ func GenerateMsg(msgType byte, data []byte, totalMsgCount int) []byte {
 	//encode msg type in the first byte
 	resultByteArray[0] = msgType
 	//encode the total msg length
-	binary.BigEndian.PutUint32(resultByteArray[1:], uint32(totalLength))
+	binary.BigEndian.PutUint32(resultByteArray[1:5], uint32(len(data)))
 	//encode the total frames id sent
-	binary.BigEndian.PutUint32(resultByteArray[5:], uint32(totalMsgCount))
+	binary.BigEndian.PutUint32(resultByteArray[5:9], uint32(totalMsgCount))
 	//next start from 9th index
-	resultByteArray = append(resultByteArray[9:], data...)
+	copy(resultByteArray[9:], data)
 	return resultByteArray
 }
 
-func NewaAnonConnection(tcp *net.TCPConn) *anonConnection {
-
-	return nil
-	//&anonConnection{tcp}
-
+func NewaAnonConnection() *anonConnection {
+	return &anonConnection{}
 }
 
 func BindAndStartListener() {
@@ -115,95 +90,61 @@ func HandleClientConnection(tcpListener net.Listener) {
 		if err != nil {
 			fmt.Println("Unable to accept connection")
 		}
-		go SendMsg(conn)
-		go RecvMsg(conn)
-
+		newAnonClientConn := NewaAnonConnection()
+		go newAnonClientConn.SendMsg(conn)
+		go newAnonClientConn.RecvMsg(conn)
 	}
-
 }
 
-func SendMsg(conn net.Conn) {
-	var MaxFrameLen int = 10
-	count := 1
+// SendMsg will wait on the Common.ToAnon
+func (annonClient *anonConnection) SendMsg(conn net.Conn) {
 	for {
-
-		rand.Seed(int64(time.Now().Nanosecond()))
-		dateBytes := GetNFrameIds(count)
-		conn.Write(GenerateMsg(byte(rand.Intn(1)), dateBytes, count))
-		count++
-		if count >= MaxFrameLen {
-			//reset count
-			count = 1
+		<-common.ToAnon.Ch
+		result := BuildTheClientDataFromMap(common.ToAnon.M)
+		result = GenerateDataMsg(TYPE_DATA, result, len(common.ToAnon.M))
+		annonClient.Lock()
+		defer annonClient.Unlock()
+		_, err := conn.Write(result)
+		if err != nil {
+			fmt.Println("Unable to send data to client", err)
+			return
 		}
-		time.Sleep(time.Duration(rand.Intn(30) + 1) * time.Second)
-		fmt.Printf("Just sent a message to the client\n")
 	}
 
 }
 
-func RecvMsg(conn net.Conn) {
+func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 
-	localClientBuf := make([]byte, 4096)
-	conn.Read(localClientBuf)
-	msgType := localClientBuf[0:1]
+	for {
+		localClientBuf := make([]byte, 4096)
+		common.ToAnon.Lck.Lock()
+		defer common.ToAnon.Lck.Unlock()
+		_, err := conn.Read(localClientBuf)
+		if err != nil {
+			fmt.Println("Unable to read from the client", err)
+			return
+		}
+		msgType := localClientBuf[0:1]
+		if msgType[0] == TYPE_BEAT {
+			annonClient.SendAck(conn)
+		} else {
+			fmt.Println("Unknown msg from client", msgType, localClientBuf)
+		}
+	}
 
-	if msgType[0] == TYPE_BEAT {
-		fmt.Printf("its a one heart beat")
-	} else {
-		fmt.Printf("Manjunath its a one ot a heart beat, how can you able to do that one?\n")
 }
 
-}
-
-func SimpleClient() {
-
-	clientConnection, err := net.DialTCP("tcp", nil, &net.TCPAddr{
-		IP:   net.ParseIP("127.0.0.1"),
-		Port: 5050,
-	})
-
+func (annonClient *anonConnection) SendAck(conn net.Conn) {
+	_, err := conn.Write([]byte{TYPE_ACK})
 	if err != nil {
-		fmt.Println("something got screwed in cleint", err)
-		panic("gone")
+		fmt.Println("Failed to send ack", err)
 	}
 
-	fmt.Println("SimpleClient called")
-	for {
-		for i := 0; i < 10; i++ {
-
-			str := "Client Msg" + strconv.FormatInt(int64(i), 10)
-			fmt.Println("sent from clinet ", str)
-			clientConnection.Write([]byte(str))
-			time.Sleep(2 * time.Second)
-
-			var locaClientBuf []byte
-			locaClientBuf = make([]byte, 4096)
-			readin, err := clientConnection.Read(locaClientBuf)
-			if err != nil {
-				fmt.Println("Unable to read in the bytes on the client side", err)
-				return
-			}
-
-			exacttoread := int(binary.BigEndian.Uint32(locaClientBuf[:4]))
-
-			fmt.Println(exacttoread)
-
-			fmt.Println("data from the server", exacttoread, readin, ":", string(locaClientBuf[4:exacttoread]))
-
-		}
-
-	}
 }
 
 func Run(inBindAddress string, inBindPort string) {
 	BindAddr = inBindAddress
 	BindPort = inBindPort
-	
+
 	go BindAndStartListener()
-	x := 1
-	for {
-		fmt.Println(string(GetNFrameIds(x)))
-		time.Sleep(3 * time.Second)
-		x++
-	}
 }
