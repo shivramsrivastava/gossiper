@@ -2,7 +2,6 @@ package anonlib
 
 import (
 	"encoding/binary"
-	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -78,7 +77,7 @@ func BindAndStartListener() {
 	//Bind to all the network inteface int the system on the same port
 	tcpListener, err := net.Listen("tcp", ":"+BindPort)
 	if err != nil {
-		fmt.Println(" BindAndStartListener", err)
+		log.Println(" BindAndStartListener", err)
 	}
 	HandleClientConnection(tcpListener)
 }
@@ -89,7 +88,7 @@ func HandleClientConnection(tcpListener net.Listener) {
 	for {
 		conn, err := tcpListener.Accept()
 		if err != nil {
-			fmt.Println("Unable to accept connection")
+			log.Println("Unable to accept connection")
 		}
 		newAnonClientConn := NewaAnonConnection()
 		go newAnonClientConn.SendMsg(conn)
@@ -103,11 +102,11 @@ func (annonClient *anonConnection) SendMsg(conn net.Conn) {
 		<-common.ToAnon.Ch
 		result := BuildTheClientDataFromMap(common.ToAnon.M)
 		result = GenerateDataMsg(TYPE_DATA, result, len(common.ToAnon.M))
-		fmt.Println(result, "sending to cleint")
+		log.Println(result, "sending to client")
 		annonClient.Lock()
 		n, err := conn.Write(result)
 		if err != nil {
-			fmt.Println("Unable to send data to client", err)
+			log.Println("Unable to send data to client", err)
 			annonClient.Unlock()
 			return
 		}
@@ -124,7 +123,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 		//defer annonClient.Unlock()
 		_, err := conn.Read(localClientBuf)
 		if err != nil {
-			fmt.Println("Unable to read from the client", err)
+			log.Println("Unable to read from the client", err)
 			return
 		}
 		msgType := localClientBuf[0:1]
@@ -133,7 +132,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 			annonClient.SendAck(conn)
 			annonClient.Unlock()
 		} else {
-			fmt.Println("Unknown msg from client", msgType)
+			log.Println("Unknown msg from client", msgType)
 		}
 	}
 
@@ -142,7 +141,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 func (annonClient *anonConnection) SendAck(conn net.Conn) {
 	_, err := conn.Write([]byte{TYPE_ACK})
 	if err != nil {
-		fmt.Println("Failed to send ack", err)
+		log.Println("Failed to send ack", err)
 	}
 
 }
