@@ -3,6 +3,7 @@ package anonlib
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -61,7 +62,7 @@ func GenerateDataMsg(msgType byte, data []byte, totalMsgCount int) []byte {
 	//encode msg type in the first byte
 	resultByteArray[0] = msgType
 	//encode the total msg length
-	binary.BigEndian.PutUint32(resultByteArray[1:5], uint32(len(data)))
+	binary.BigEndian.PutUint32(resultByteArray[1:5], uint32(len(data)+(totalMsgCount*2)))
 	//encode the total frames id sent
 	binary.BigEndian.PutUint32(resultByteArray[5:9], uint32(totalMsgCount))
 	//next start from 9th index
@@ -102,13 +103,16 @@ func (annonClient *anonConnection) SendMsg(conn net.Conn) {
 		<-common.ToAnon.Ch
 		result := BuildTheClientDataFromMap(common.ToAnon.M)
 		result = GenerateDataMsg(TYPE_DATA, result, len(common.ToAnon.M))
+		fmt.Println(result, "sending to cleint")
 		annonClient.Lock()
-		defer annonClient.Unlock()
-		_, err := conn.Write(result)
+		n, err := conn.Write(result)
 		if err != nil {
 			fmt.Println("Unable to send data to client", err)
+			annonClient.Unlock()
 			return
 		}
+		log.Printf("Sent %d bytes", n)
+		annonClient.Unlock()
 	}
 
 }
@@ -117,8 +121,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 
 	for {
 		localClientBuf := make([]byte, 4096)
-		common.ToAnon.Lck.Lock()
-		defer common.ToAnon.Lck.Unlock()
+		//defer annonClient.Unlock()
 		_, err := conn.Read(localClientBuf)
 		if err != nil {
 			fmt.Println("Unable to read from the client", err)
@@ -126,9 +129,11 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 		}
 		msgType := localClientBuf[0:1]
 		if msgType[0] == TYPE_BEAT {
+			annonClient.Lock()
 			annonClient.SendAck(conn)
+			annonClient.Unlock()
 		} else {
-			fmt.Println("Unknown msg from client", msgType, localClientBuf)
+			fmt.Println("Unknown msg from client", msgType)
 		}
 	}
 

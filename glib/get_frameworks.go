@@ -15,13 +15,13 @@ import (
 func GetListofFrameworks(MasterEP string) {
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/state-summary", MasterEP))
-	defer resp.Body.Close()
 
 	if err != nil {
 
 		log.Printf("Unable to reach the Master error = %v", err)
 		return
 	}
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 
@@ -65,7 +65,7 @@ func GetListofFrameworks(MasterEP string) {
 		_, exisit := common.ToAnon.M[id]
 		if !exisit {
 			log.Printf("framework ID %v is new", id)
-			common.ToAnon.M[id] = true
+			common.ToAnon.M[id] = false
 			if isNewFrwrk == false {
 				isNewFrwrk = true
 			}
@@ -75,9 +75,9 @@ func GetListofFrameworks(MasterEP string) {
 
 	}
 
-	if isNewFrwrk {
-		common.ToAnon.Ch <- true
-	}
+	common.ToAnon.Ch <- true
+	//	if isNewFrwrk {
+	//	}
 
 }
 

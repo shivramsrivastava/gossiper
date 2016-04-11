@@ -2,5 +2,5 @@
 		"Name": "First",
 			"ConfigType": "New",
 				"GPort": 4400,
-				"MasterEndPoint" : "10.145.208.108:5050"
+				"MasterEndPoint" : "10.145.208.117:5050"
 }
