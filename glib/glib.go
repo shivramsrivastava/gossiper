@@ -102,7 +102,7 @@ func (G *Glib) RecvMsg() {
 	//Wait on a channel and once you recive a message from others addit to the map
 }
 
-func Run(name string, myport int, isnew bool, others []string) {
+func Run(name string, myport int, isnew bool, others []string, masterEP string) {
 
 	var wait chan struct{}
 
@@ -129,6 +129,9 @@ func Run(name string, myport int, isnew bool, others []string) {
 
 	//Start the goroutine that will examine the recived q and process
 	//go ExamineFramework()
+
+	//Start a goroutine that will keep polling the master and get list of framework
+	go CollectMasterData(masterEP)
 
 	//wait
 	g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("Initial %s:%v", g.Name, time.Now())))

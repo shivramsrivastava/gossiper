@@ -9,7 +9,7 @@ import (
 
 	"./glib"
 
-	//	"./anonlib"
+	"./anonlib"
 	"./httplib"
 )
 
@@ -88,7 +88,7 @@ func main() {
 		others = config.JoinEndPoint
 	}
 
-	go glib.Run(config.Name, config.GPort, isnew, []string{others})
+	go glib.Run(config.Name, config.GPort, isnew, []string{others}, config.MasterEndPoint)
 
 	//start mesos master poller
 	//go mesoslib.Run()
