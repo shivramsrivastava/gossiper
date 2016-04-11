@@ -140,7 +140,7 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string) 
 		select {
 
 		case <-time.After(time.Second * 10):
-			log.Printf("A Second elapsed for %s", g.Name)
+			log.Printf("Ten Seconds elapsed for %s", g.Name)
 			//g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("%s:%v", g.Name, time.Now())))
 
 		case <-wait:
