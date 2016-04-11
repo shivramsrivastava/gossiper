@@ -6,13 +6,30 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	//	"sync"
+	"sync"
 	"time"
 
-	"../common"
+	//"../common"
 )
 
-func GetListofFrameworks(MasterEP string) {
+type GossipMsG struct {
+	Name       string
+	FrameWorks []string
+}
+
+var (
+	AllFrameworks   map[string]map[string]bool //Map of maps for all the frameworks
+	CommonFramework map[string]bool            //Common among all the framework
+	FrmWrkLck       sync.Mutex                 //Lock for centralized framework
+)
+
+func init() {
+
+	AllFrameworks = make(map[string]map[string]bool)
+	CommonFramework = make(map[string]bool)
+}
+
+func GetListofFrameworks(G *Glib, MasterEP string) {
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/state-summary", MasterEP))
 
@@ -46,7 +63,13 @@ func GetListofFrameworks(MasterEP string) {
 		return
 	}
 
-	var isNewFrwrk bool
+	this_frmwrk, exisit := AllFrameworks[G.Name]
+	FrmWrkLck.Lock()
+	if !exisit {
+		AllFrameworks[G.Name] = make(map[string]bool)
+		this_frmwrk = AllFrameworks[G.Name]
+	}
+	FrmWrkLck.Unlock()
 
 	for _, frwrk_interface := range frameworks_array {
 
@@ -61,32 +84,46 @@ func GetListofFrameworks(MasterEP string) {
 			continue
 		}
 		log.Printf("framework ID %v", id)
-		common.ToAnon.Lck.Lock()
-		_, exisit := common.ToAnon.M[id]
-		if !exisit {
-			log.Printf("framework ID %v is new", id)
-			common.ToAnon.M[id] = false
-			if isNewFrwrk == false {
-				isNewFrwrk = true
-			}
+		//common.ToAnon.Lck.Lock()
+		//_, exisit := common.ToAnon.M[id]
 
-		}
-		common.ToAnon.Lck.Unlock()
+		//common.ToAnon.M[id] = false
+		this_frmwrk[id] = false
+
+		//common.ToAnon.Lck.Unlock()
 
 	}
-
-	common.ToAnon.Ch <- true
-	//	if isNewFrwrk {
-	//	}
-
+	FrmWrkLck.Lock()
+	AllFrameworks[G.Name] = this_frmwrk
+	FrmWrkLck.Unlock()
+	G.BC.QueueBroadcast(NewBroadcast(GossipFrameworks(G.Name)))
 }
 
-func CollectMasterData(MasterEP string) {
+func CollectMasterData(G *Glib, MasterEP string) {
 
 	for {
 		select {
 		case <-time.After(time.Second * 5):
-			GetListofFrameworks(MasterEP)
+			GetListofFrameworks(G, MasterEP)
 		}
 	}
+}
+
+func GossipFrameworks(Name string) string {
+
+	var msg GossipMsG
+
+	msg.Name = Name
+
+	gmap, isvalid := AllFrameworks[Name]
+	if isvalid {
+		for name := range gmap {
+			msg.FrameWorks = append(msg.FrameWorks, name)
+		}
+	}
+
+	data, _ := json.Marshal(msg)
+
+	return string(data)
+
 }

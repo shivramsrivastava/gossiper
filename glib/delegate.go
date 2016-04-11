@@ -1,6 +1,7 @@
 package glib
 
 import (
+	"encoding/json"
 	"log"
 )
 
@@ -15,7 +16,25 @@ func (d *delegate) NodeMeta(limit int) []byte {
 }
 
 func (d *delegate) NotifyMsg(buf []byte) {
+	//Gossipers will recive the message others and update the global map
 	log.Printf("Delegate NotifyMsg() is called %s", string(buf))
+	var msg GossipMsG
+	err := json.Unmarshal(buf, &msg)
+	if err != nil {
+		log.Printf("Delegate NotifyMsg() unmarshall error %v", err)
+		return
+	}
+
+	this_frmwrk, isvalid := AllFrameworks[msg.Name]
+	if !isvalid {
+		this_frmwrk = make(map[string]bool)
+	}
+	for _, n := range msg.FrameWorks {
+		this_frmwrk[n] = false
+	}
+	FrmWrkLck.Lock()
+	AllFrameworks[msg.Name] = this_frmwrk
+	FrmWrkLck.Unlock()
 }
 
 func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte {

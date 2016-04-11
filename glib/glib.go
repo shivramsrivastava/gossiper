@@ -2,7 +2,7 @@ package glib
 
 import (
 	Q "container/list"
-	"fmt"
+	//"fmt"
 	"log"
 	"time"
 
@@ -128,20 +128,20 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string) 
 	}
 
 	//Start the goroutine that will examine the recived q and process
-	//go ExamineFramework()
+	go ExamineFramework()
 
 	//Start a goroutine that will keep polling the master and get list of framework
-	go CollectMasterData(masterEP)
+	go CollectMasterData(g, masterEP)
 
 	//wait
-	g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("Initial %s:%v", g.Name, time.Now())))
+
 	for {
 
 		select {
 
 		case <-time.After(time.Second * 10):
 			log.Printf("A Second elapsed for %s", g.Name)
-			g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("%s:%v", g.Name, time.Now())))
+			//g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("%s:%v", g.Name, time.Now())))
 
 		case <-wait:
 			log.Printf("End of glib library, terminating")
