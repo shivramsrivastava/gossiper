@@ -10,7 +10,7 @@ import (
 )
 
 type anonConnection struct {
-	*sync.Mutex
+	sync.Mutex
 }
 
 const (
