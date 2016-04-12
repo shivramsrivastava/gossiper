@@ -88,7 +88,7 @@ func HandleClientConnection(tcpListener net.Listener) {
 	for {
 		conn, err := tcpListener.Accept()
 		if err != nil {
-			log.Println("Unable to accept connection")
+			log.Println("Unable to accept connection",err)
 		}
 		newAnonClientConn := NewaAnonConnection()
 		go newAnonClientConn.SendMsg(conn)
@@ -102,15 +102,15 @@ func (annonClient *anonConnection) SendMsg(conn net.Conn) {
 		<-common.ToAnon.Ch
 		result := BuildTheClientDataFromMap(common.ToAnon.M)
 		result = GenerateDataMsg(TYPE_DATA, result, len(common.ToAnon.M))
-		log.Println(result, "sending to client")
 		annonClient.Lock()
+    log.Println("SendMsg: trying to send data to client",string(result))
 		n, err := conn.Write(result)
 		if err != nil {
-			log.Println("Unable to send data to client", err)
+			log.Println("SednMsg: Unable to send data to client", err)
 			annonClient.Unlock()
 			return
 		}
-		log.Printf("Sent %d bytes", n)
+		log.Printf("SendMsg: Total bytes sent %d bytes", n)
 		annonClient.Unlock()
 	}
 
@@ -123,7 +123,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 		//defer annonClient.Unlock()
 		_, err := conn.Read(localClientBuf)
 		if err != nil {
-			log.Println("Unable to read from the client", err)
+			log.Println("RecvMsg: Unable to read from the client", err, conn.RemoteAddr().String())
 			return
 		}
 		msgType := localClientBuf[0:1]
@@ -132,7 +132,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 			annonClient.SendAck(conn)
 			annonClient.Unlock()
 		} else {
-			log.Println("Unknown msg from client", msgType)
+			log.Println("RecvMsg: Unknown msg from client", msgType,conn.RemoteAddr().String())
 		}
 	}
 
@@ -141,7 +141,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 func (annonClient *anonConnection) SendAck(conn net.Conn) {
 	_, err := conn.Write([]byte{TYPE_ACK})
 	if err != nil {
-		log.Println("Failed to send ack", err)
+		log.Println("SednAck: Failed to send ack", err, conn.RemoteAddr().String())
 	}
 
 }
@@ -149,6 +149,8 @@ func (annonClient *anonConnection) SendAck(conn net.Conn) {
 func Run(inBindAddress string, inBindPort string) {
 	BindAddr = inBindAddress
 	BindPort = inBindPort
+
+  log.Println("Starting the anonlib ")
 
 	go BindAndStartListener()
 }

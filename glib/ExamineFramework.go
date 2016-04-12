@@ -10,6 +10,7 @@ import (
 func PerformIntersection() {
 
 	log.Printf("PerformIntersection() Sent to TCP cannel")
+  FrmWrkLck.Lock()
 	for mk, mv := range AllFrameworks {
 		for n, _ := range mv {
 			isCommon := true
@@ -26,6 +27,8 @@ func PerformIntersection() {
 		}
 	}
 
+  FrmWrkLck.Unlock()
+
 	common.ToAnon.Lck.Lock()
 	for k, v := range CommonFramework {
 		common.ToAnon.M[k] = v
@@ -41,6 +44,7 @@ func ExamineFramework() {
 		for {
 			<-time.After(time.Second * 10)
 			log.Printf("Dump AllFramework %v", AllFrameworks)
+			log.Printf("Dump CommonFramework %v", CommonFramework)
 		}
 	}()
 
