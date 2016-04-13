@@ -40,12 +40,18 @@ func BuildClientFrameData(framid string, enable bool) []byte {
 // BuildTheClientDataFromMap locks and read the map and build calls the BuildClientFrameData
 func BuildTheClientDataFromMap(M map[string]bool) []byte {
 
+  flag:=false
+
 	common.ToAnon.Lck.Lock()
 	defer common.ToAnon.Lck.Unlock()
 
 	result := []byte{}
 	for key, value := range M {
+    if flag==true{
+      result = append(result, []byte(" ")...)
+    }
 		result = append(result, BuildClientFrameData(key, value)...)
+    flag=true
 	}
 
 	return result
