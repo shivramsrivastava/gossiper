@@ -72,7 +72,7 @@ func main() {
 	ProcessConfFile(*conffile, &config)
 
 	//Start Anon TCP server module
-	go anonlib.Run("", config.TCPPort)
+	go anonlib.Run(config.MasterEndPoint, config.TCPPort)
 
 	//start http server
 	go httplib.Run(config.HTTPPort)

@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"log"
 	"net"
+	"strings"
 	"sync"
+	"time"
 
 	"../common"
 )
@@ -21,8 +23,8 @@ const (
 
 //Some Global variables
 var (
-	BindAddr string
-	BindPort string
+	ServerAddr string
+	ServerPort string
 )
 
 // GetTheClientData builds the frame-id:bool value byte string
@@ -40,18 +42,18 @@ func BuildClientFrameData(framid string, enable bool) []byte {
 // BuildTheClientDataFromMap locks and read the map and build calls the BuildClientFrameData
 func BuildTheClientDataFromMap(M map[string]bool) []byte {
 
-  flag:=false
+	flag := false
 
 	common.ToAnon.Lck.Lock()
 	defer common.ToAnon.Lck.Unlock()
 
 	result := []byte{}
 	for key, value := range M {
-    if flag==true{
-      result = append(result, []byte(" ")...)
-    }
+		if flag == true {
+			result = append(result, []byte(" ")...)
+		}
 		result = append(result, BuildClientFrameData(key, value)...)
-    flag=true
+		flag = true
 	}
 
 	return result
@@ -79,27 +81,17 @@ func NewaAnonConnection() *anonConnection {
 	return &anonConnection{}
 }
 
-func BindAndStartListener() {
+func DailtoServer() {
 	//Bind to all the network inteface int the system on the same port
-	tcpListener, err := net.Listen("tcp", ":"+BindPort)
+	tcpServer, err := net.Dial("tcp", ServerAddr)
 	if err != nil {
-		log.Println(" BindAndStartListener", err)
+		log.Println(" Unable to connect to the server", err)
 	}
-	HandleClientConnection(tcpListener)
-}
+	newAnonClientConn := NewaAnonConnection()
+	go newAnonClientConn.SendMsg(tcpServer)
+	go newAnonClientConn.RecvMsg(tcpServer)
+	go newAnonClientConn.SendHeartBeat(tcpServer)
 
-//listen for incommng connection
-func HandleClientConnection(tcpListener net.Listener) {
-
-	for {
-		conn, err := tcpListener.Accept()
-		if err != nil {
-			log.Println("Unable to accept connection",err)
-		}
-		newAnonClientConn := NewaAnonConnection()
-		go newAnonClientConn.SendMsg(conn)
-		go newAnonClientConn.RecvMsg(conn)
-	}
 }
 
 // SendMsg will wait on the Common.ToAnon
@@ -109,7 +101,7 @@ func (annonClient *anonConnection) SendMsg(conn net.Conn) {
 		result := BuildTheClientDataFromMap(common.ToAnon.M)
 		result = GenerateDataMsg(TYPE_DATA, result, len(common.ToAnon.M))
 		annonClient.Lock()
-    log.Println("SendMsg: trying to send data to client",string(result))
+		log.Println("SendMsg: trying to send data to client", string(result))
 		n, err := conn.Write(result)
 		if err != nil {
 			log.Println("SednMsg: Unable to send data to client", err)
@@ -133,30 +125,36 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn) {
 			return
 		}
 		msgType := localClientBuf[0:1]
-		if msgType[0] == TYPE_BEAT {
-			annonClient.Lock()
-			annonClient.SendAck(conn)
-			annonClient.Unlock()
+		if msgType[0] == TYPE_ACK {
+			log.Println("RecvMsg: received the ack from the anon server")
 		} else {
-			log.Println("RecvMsg: Unknown msg from client", msgType,conn.RemoteAddr().String())
+			log.Println("RecvMsg: Unknown msg from client", msgType, conn.RemoteAddr().String())
 		}
 	}
 
 }
 
-func (annonClient *anonConnection) SendAck(conn net.Conn) {
-	_, err := conn.Write([]byte{TYPE_ACK})
-	if err != nil {
-		log.Println("SednAck: Failed to send ack", err, conn.RemoteAddr().String())
+func (annonClient *anonConnection) SendHeartBeat(conn net.Conn) {
+
+	for {
+
+		<-time.After(10 * time.Second)
+		annonClient.Lock()
+		_, err := conn.Write([]byte{TYPE_BEAT})
+		annonClient.Unlock()
+		if err != nil {
+			log.Println("SendHeartBeat: Failed to send Heart Beat msg", err, conn.RemoteAddr().String())
+		}
 	}
 
 }
 
 func Run(inBindAddress string, inBindPort string) {
-	BindAddr = inBindAddress
-	BindPort = inBindPort
+	ServerAddr = strings.Replace(inBindAddress, ":5050", inBindPort, -1)
+	ServerPort = inBindPort
 
-  log.Println("Starting the anonlib ")
+	log.Println("Starting the anonlib ")
+	log.Println("The master anon tcp server is", ServerAddr)
 
-	go BindAndStartListener()
+	go DailtoServer()
 }
