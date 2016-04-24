@@ -7,6 +7,8 @@ import (
 	"time"
 
 	ml "github.com/hashicorp/memberlist"
+
+	"../common"
 )
 
 type ML_interface interface {
@@ -93,13 +95,24 @@ func (G *Glib) Leave() error {
 }
 
 func (G *Glib) SendMsg() {
-	//Send Message to all the gossiper if a new framework is added to this master
 
+	log.Printf("Glib SendMsg() is called")
+	//Send Message to all the gossiper if a new framework is added to this master
 }
 
 func (G *Glib) RecvMsg() {
 
+	log.Printf("Glib RecvMsg() is called")
 	//Wait on a channel and once you recive a message from others addit to the map
+}
+
+//A simple function wrap to broadcast a message
+func (G *Glib) BroadCast(msg []byte) error {
+
+	G.BC.QueueBroadcast(NewBroadcast(msg))
+	log.Printf("Broadcasting %s", string(msg))
+	return nil
+
 }
 
 func Run(name string, myport int, isnew bool, others []string, masterEP string) {
@@ -109,6 +122,7 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string) 
 	wait = make(chan struct{})
 
 	//Create and Initalize the gossiper libraray
+	common.ThisDCName = name
 
 	//NewGlib(name string, zone string, new bool, ToJoin []string) *Glib {
 	g := NewGlib(name, myport, "", isnew, others)
@@ -142,10 +156,9 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string) 
 		case <-time.After(time.Second * 10):
 			log.Printf("Ten Seconds elapsed for %s", g.Name)
 			//g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("%s:%v", g.Name, time.Now())))
-
-		case <-wait:
-			log.Printf("End of glib library, terminating")
-			break
 		}
+
 	}
+
+	<-wait
 }

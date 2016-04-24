@@ -9,13 +9,8 @@ import (
 	"sync"
 	"time"
 
-	//"../common"
+	"../common"
 )
-
-type GossipMsG struct {
-	Name       string
-	FrameWorks []string
-}
 
 var (
 	AllFrameworks   map[string]map[string]bool //Map of maps for all the frameworks
@@ -93,37 +88,129 @@ func GetListofFrameworks(G *Glib, MasterEP string) {
 		//common.ToAnon.Lck.Unlock()
 
 	}
-	FrmWrkLck.Lock()
-	AllFrameworks[G.Name] = this_frmwrk
-	FrmWrkLck.Unlock()
-	G.BC.QueueBroadcast(NewBroadcast(GossipFrameworks(G.Name)))
+}
+
+func GetMastersResources(G *Glib, MasterEP string) {
+
+	resp, err := http.Get(fmt.Sprintf("http://%s/state/snapshot", MasterEP))
+
+	if err != nil {
+
+		log.Printf("Unable to reach the Master error = %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Printf("Unable to read the body error = %v", err)
+		return
+	}
+
+	var data map[string]interface{}
+
+	err = json.Unmarshal(body, &data)
+
+	if err != nil {
+		log.Printf("Json Unmarshall error = %v", err)
+		return
+	}
+
+	var tCPU, uCPU float64
+	var tMem, uMem float64
+	var tDisk, uDisk float64
+
+	var found bool
+
+	tCPU, found = data["master/cpus_total"].(float64)
+	if found {
+		log.Printf("Data not found from master /state/snapshot")
+	}
+	uCPU, found = data["master/cpus_used"].(float64)
+	if found {
+		log.Printf("Data not found from master /state/snapshot")
+	}
+	tMem, found = data["master/mem_total"].(float64)
+	if found {
+		log.Printf("Data not found from master /state/snapshot")
+	}
+	uMem, found = data["master/mem_used"].(float64)
+	if found {
+		log.Printf("Data not found from master /state/snapshot")
+	}
+	tDisk, found = data["master/disk_total"].(float64)
+	if found {
+		log.Printf("Data not found from master /state/snapshot")
+	}
+	uDisk, found = data["master/disk_used"].(float64)
+	if found {
+		log.Printf("Data not found from master /state/snapshot")
+	}
+
+	//G.Name
+	common.ALLDCs.Lck.Lock()
+	defer common.ALLDCs.Lck.Unlock()
+	var mydc *common.DC
+	mydc, available := common.ALLDCs.List[G.Name]
+
+	if !available {
+		log.Printf("Our datacenter entry is not found yet")
+		mydc = &common.DC{}
+		common.ALLDCs.List[G.Name] = mydc
+	}
+
+	mydc.CPU = tCPU
+	mydc.MEM = tMem
+	mydc.DISK = tDisk
+	mydc.Ucpu = uCPU
+	mydc.Umem = uMem
+	mydc.Udisk = uDisk
+
+	return
+
 }
 
 func CollectMasterData(G *Glib, MasterEP string) {
 
+	//First get the channels initialized
+	var FrameworkFrequency, ResourceFrequency time.Duration
+	FrameworkFrequency = 5
+	ResourceFrequency = 3
+	getFrameWorkCh := time.After(time.Second * FrameworkFrequency)
+	getMasterResourceCh := time.After(time.Second * ResourceFrequency)
+
 	for {
 		select {
-		case <-time.After(time.Second * 5):
+		case <-getFrameWorkCh:
+			getFrameWorkCh = time.After(time.Second * FrameworkFrequency)
 			GetListofFrameworks(G, MasterEP)
+
+		case <-getMasterResourceCh:
+			getMasterResourceCh = time.After(time.Second * ResourceFrequency)
+			GetMastersResources(G, MasterEP)
+
 		}
 	}
 }
 
-func GossipFrameworks(Name string) string {
+func GossipFrameworks(Name string) []byte {
 
-	var msg GossipMsG
+	var msg Msg
+	var FW FrameWorkMsG
 
 	msg.Name = Name
 
 	gmap, isvalid := AllFrameworks[Name]
 	if isvalid {
 		for name := range gmap {
-			msg.FrameWorks = append(msg.FrameWorks, name)
+			FW.FrameWorks = append(FW.FrameWorks, name)
 		}
 	}
 
+	msg.Body = &FW
 	data, _ := json.Marshal(msg)
 
-	return string(data)
+	return data
 
 }

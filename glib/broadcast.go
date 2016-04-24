@@ -12,11 +12,11 @@ type broadcast struct {
 	notify chan<- struct{}
 }
 
-func NewBroadcast(Msg string) *broadcast {
+func NewBroadcast(Msg []byte) *broadcast {
 
 	var bc broadcast
 
-	bc.msg = []byte(Msg)
+	bc.msg = Msg
 
 	return &bc
 }

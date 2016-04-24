@@ -10,6 +10,7 @@ import (
 	"./glib"
 
 	"./anonlib"
+	"./common"
 	"./httplib"
 )
 
@@ -89,6 +90,10 @@ func main() {
 	}
 
 	go glib.Run(config.Name, config.GPort, isnew, []string{others}, config.MasterEndPoint)
+
+	val, _ := json.Marshal(&common.ALLDCs)
+
+	log.Println("Marshalled output:", string(val))
 
 	//start mesos master poller
 	//go mesoslib.Run()
