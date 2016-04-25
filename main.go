@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 
-	"./glib"
-
 	"./anonlib"
 	"./common"
+	"./consulLib"
+	"./glib"
 	"./httplib"
 )
 
@@ -23,6 +23,7 @@ type GossiperConfig struct {
 	HTTPPort       string //Defaults to 8080 if otherwise specify explicitly
 	TCPPort        string //TCP port at which gossiper will bind and listen for anon module to connect to
 	GPort          int    //Port at which gossper should start
+	ConsulConfig   common.ConsulConfig
 }
 
 func NewGossiperConfig() GossiperConfig {
@@ -97,6 +98,9 @@ func main() {
 
 	//start mesos master poller
 	//go mesoslib.Run()
+
+	//start consul client
+	go consulLib.Run(&config.ConsulConfig, config.Name)
 
 	//Start the Policy Engine module
 	//PE.Run()
