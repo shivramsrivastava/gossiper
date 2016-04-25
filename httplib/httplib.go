@@ -41,6 +41,7 @@ func (this *MainController) StatusAll() {
 		return
 	}
 
+	res.Name = dc.Name
 	res.CPU = dc.CPU
 	res.MEM = dc.MEM
 	res.DISK = dc.DISK

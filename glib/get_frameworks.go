@@ -79,20 +79,15 @@ func GetListofFrameworks(G *Glib, MasterEP string) {
 			continue
 		}
 		log.Printf("framework ID %v", id)
-		//common.ToAnon.Lck.Lock()
-		//_, exisit := common.ToAnon.M[id]
 
-		//common.ToAnon.M[id] = false
 		this_frmwrk[id] = false
-
-		//common.ToAnon.Lck.Unlock()
 
 	}
 }
 
 func GetMastersResources(G *Glib, MasterEP string) {
 
-	resp, err := http.Get(fmt.Sprintf("http://%s/state/snapshot", MasterEP))
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics/snapshot", MasterEP))
 
 	if err != nil {
 
@@ -124,27 +119,27 @@ func GetMastersResources(G *Glib, MasterEP string) {
 	var found bool
 
 	tCPU, found = data["master/cpus_total"].(float64)
-	if found {
+	if !found {
 		log.Printf("Data not found from master /state/snapshot")
 	}
 	uCPU, found = data["master/cpus_used"].(float64)
-	if found {
+	if !found {
 		log.Printf("Data not found from master /state/snapshot")
 	}
 	tMem, found = data["master/mem_total"].(float64)
-	if found {
+	if !found {
 		log.Printf("Data not found from master /state/snapshot")
 	}
 	uMem, found = data["master/mem_used"].(float64)
-	if found {
+	if !found {
 		log.Printf("Data not found from master /state/snapshot")
 	}
 	tDisk, found = data["master/disk_total"].(float64)
-	if found {
+	if !found {
 		log.Printf("Data not found from master /state/snapshot")
 	}
 	uDisk, found = data["master/disk_used"].(float64)
-	if found {
+	if !found {
 		log.Printf("Data not found from master /state/snapshot")
 	}
 
@@ -157,8 +152,11 @@ func GetMastersResources(G *Glib, MasterEP string) {
 	if !available {
 		log.Printf("Our datacenter entry is not found yet")
 		mydc = &common.DC{}
+		mydc.Name = G.Name
 		common.ALLDCs.List[G.Name] = mydc
 	}
+
+	log.Println("The values are", tCPU, tMem, tDisk, uCPU, uMem, uDisk)
 
 	mydc.CPU = tCPU
 	mydc.MEM = tMem
@@ -212,5 +210,4 @@ func GossipFrameworks(Name string) []byte {
 	data, _ := json.Marshal(msg)
 
 	return data
-
 }

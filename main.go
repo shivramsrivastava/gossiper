@@ -72,6 +72,8 @@ func main() {
 	flag.Parse()
 	ProcessConfFile(*conffile, &config)
 
+	common.ThisDCName = config.Name
+
 	//Start Anon TCP server module
 	go anonlib.Run(config.MasterEndPoint, config.TCPPort)
 
