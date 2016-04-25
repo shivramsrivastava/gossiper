@@ -18,6 +18,7 @@ type OutOfResourceMsG struct {
 	OOR bool //Is Datacenter Out of Resource
 }
 
+//NOt used currently
 type DCMsG struct {
 	Name     string
 	EndPoint string

@@ -50,7 +50,7 @@ func (this *MainController) StatusAll() {
 	res.UDISK = dc.Udisk
 	res.OutOfResource = dc.OutOfResource
 
-	resp_byte, err := json.Marshal(&res)
+	resp_byte, err := json.MarshalIndent(&res, "", "  ")
 
 	if err != nil {
 
@@ -75,10 +75,10 @@ func (this *MainController) BootStrap() {
 		dc.EndPoint = v.Endpoint
 		resp = append(resp, dc)
 	}
-	resp_byte, err := json.Marshal(&resp)
+	resp_byte, err := json.MarshalIndent(&resp, "", "  ")
 
-	if err == nil {
-		log.Println("Something wrong bootstrap api failed")
+	if err != nil {
+		log.Println("Something wrong bootstrap api failed %v", err)
 		this.Ctx.WriteString("Boot Strap Failed")
 		return
 	}

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	//	"../common"
+	"../common"
 )
 
 type delegate struct {
@@ -61,12 +61,20 @@ func (d *delegate) NotifyMsg(buf []byte) {
 		}
 
 	case "DC":
-		msg.Body = &DCMsG{}
+		var dc common.DC
+		msg.Body = &dc
 		err := json.Unmarshal(buf, &msg)
 		if err != nil {
 			log.Printf("Delegate NotifyMsg() unmarshall Datacenter Mesage error %v", err)
 			return
 		}
+
+		log.Printf("DC information obtained %v", dc)
+
+		common.ALLDCs.Lck.Lock()
+		defer common.ALLDCs.Lck.Unlock()
+		common.ALLDCs.List[dc.Name] = &dc
+		return
 	}
 
 }

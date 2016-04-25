@@ -165,8 +165,26 @@ func GetMastersResources(G *Glib, MasterEP string) {
 	mydc.Umem = uMem
 	mydc.Udisk = uDisk
 
+	GossipDCInfo(G, mydc)
+
 	return
 
+}
+
+func GossipDCInfo(G *Glib, dc *common.DC) {
+
+	var msg Msg
+
+	msg.Name = G.Name
+	msg.Type = "DC"
+	msg.Body = dc
+	msg_bytes, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("Unable to broadcast DC information to other gosipers Marshall error")
+	} else {
+
+		G.BroadCast(msg_bytes)
+	}
 }
 
 func CollectMasterData(G *Glib, MasterEP string) {
