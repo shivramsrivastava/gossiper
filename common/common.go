@@ -48,3 +48,11 @@ func init() {
 	fmt.Printf("Initalizeing Common")
 
 }
+
+//global consul config
+type ConsulConfig struct {
+	IsLeader    bool
+	DCEndpoint  string
+	StorePreFix string
+	DCName      string
+}
