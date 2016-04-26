@@ -50,7 +50,7 @@ func (G *Glib) Init() error {
 	G.ToQ = Q.New()
 	G.FromQ = Q.New()
 
-	G.config = ml.DefaultLocalConfig()
+	G.config = ml.DefaultWANConfig()
 
 	G.config.BindPort = G.BindPort
 	G.config.Name = G.Name
