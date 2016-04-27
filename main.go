@@ -23,6 +23,7 @@ type GossiperConfig struct {
 	HTTPPort       string //Defaults to 8080 if otherwise specify explicitly
 	TCPPort        string //TCP port at which gossiper will bind and listen for anon module to connect to
 	GPort          int    //Port at which gossper should start
+	AdvertiseAddr  string //The advertised address of the gossiper so that other gossipers coudl connect
 	ConsulConfig   common.ConsulConfig
 }
 
@@ -35,6 +36,7 @@ func NewGossiperConfig() GossiperConfig {
 		HTTPPort:       "8080",
 		TCPPort:        "5555",
 		GPort:          4444,
+		AdvertiseAddr:  "",
 	}
 }
 
@@ -92,7 +94,7 @@ func main() {
 		others = config.JoinEndPoint
 	}
 
-	go glib.Run(config.Name, config.GPort, isnew, []string{others}, config.MasterEndPoint)
+	go glib.Run(config.Name, config.GPort, isnew, []string{others}, config.MasterEndPoint, config.AdvertiseAddr)
 
 	val, _ := json.Marshal(&common.ALLDCs)
 

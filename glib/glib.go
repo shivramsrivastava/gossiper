@@ -22,25 +22,26 @@ type ML_interface interface {
 //Hashi corps memberlist is well tested and is used in consula nd nomad for gossip (SWIM) among different notes in the cluster
 //we want to use a such a well eshtablished library for Mesos Federation
 type Glib struct {
-	list       ML_interface             //Main gossiper library
-	Configtype string                   //Type of the configfile default or LAN etc.,
-	config     *ml.Config               //They type of config that has been used for this gossiper
-	BC         *ml.TransmitLimitedQueue //Broadcast queue
-	Name       string                   //Name of this cluster or gosiper
-	Zone       string                   //Zone an optional value
-	BindPort   int                      //The port at which gossiper will bind to
-	M          int                      //Number of members those are in the federation
-	Msg        []byte                   //Message or Payload that will be passed around among gossipers
-	New        bool                     //Is this a new cluster or joining an existing cluster
-	ToJoin     []string                 //List of cluster this gossiper can join
-	ToQ        *Q.List                  //Messages to be broadcasted to other gossipers
-	FromQ      *Q.List                  //Messages recived from other gossipers
+	list          ML_interface             //Main gossiper library
+	Configtype    string                   //Type of the configfile default or LAN etc.,
+	config        *ml.Config               //They type of config that has been used for this gossiper
+	BC            *ml.TransmitLimitedQueue //Broadcast queue
+	Name          string                   //Name of this cluster or gosiper
+	Zone          string                   //Zone an optional value
+	BindPort      int                      //The port at which gossiper will bind to
+	AdvertiseAddr string                   //The address this gossiper will advertise to others in a WAN setup
+	M             int                      //Number of members those are in the federation
+	Msg           []byte                   //Message or Payload that will be passed around among gossipers
+	New           bool                     //Is this a new cluster or joining an existing cluster
+	ToJoin        []string                 //List of cluster this gossiper can join
+	ToQ           *Q.List                  //Messages to be broadcasted to other gossipers
+	FromQ         *Q.List                  //Messages recived from other gossipers
 
 }
 
-func NewGlib(name string, myport int, zone string, new bool, ToJoin []string) *Glib {
+func NewGlib(name string, myport int, zone string, new bool, ToJoin []string, advertiseaddr string) *Glib {
 
-	return &Glib{Name: name, BindPort: myport, Zone: zone, New: new}
+	return &Glib{Name: name, BindPort: myport, Zone: zone, New: new, AdvertiseAddr: advertiseaddr}
 }
 
 func (G *Glib) Init() error {
@@ -53,6 +54,8 @@ func (G *Glib) Init() error {
 	G.config = ml.DefaultWANConfig()
 
 	G.config.BindPort = G.BindPort
+	G.config.AdvertiseAddr = G.AdvertiseAddr
+	G.config.AdvertisePort = G.BindPort
 	G.config.Name = G.Name
 	G.config.Delegate = &delegate{glib: G}
 
@@ -115,7 +118,7 @@ func (G *Glib) BroadCast(msg []byte) error {
 
 }
 
-func Run(name string, myport int, isnew bool, others []string, masterEP string) {
+func Run(name string, myport int, isnew bool, others []string, masterEP string, AdvertiseAddr string) {
 
 	var wait chan struct{}
 
@@ -125,7 +128,7 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string) 
 	common.ThisDCName = name
 
 	//NewGlib(name string, zone string, new bool, ToJoin []string) *Glib {
-	g := NewGlib(name, myport, "", isnew, others)
+	g := NewGlib(name, myport, "", isnew, others, AdvertiseAddr)
 
 	err := g.Init()
 
