@@ -11,31 +11,14 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
-// global map struct for all the dc list
-// this will be populated only for the leader
-type globalDCMap struct {
-	*sync.Mutex
-	//here string is the node name for now.
-	// TODO: if two nodes on a WAN have the same name?
-	DCClientConnection map[string]*FederaConsulClient
-	AvalibleDCInfo     map[string]*api.AgentMember
-}
-
-//consul client connection
-type FederaConsulClient struct {
-	*api.Client
-	*api.KV
-	Name     string //this will have the dc name
-	IsLeader bool   //if this client is the leader
-	DClist   *globalDCMap
-}
-
 func NewglobalDCMap() *globalDCMap {
 	return &globalDCMap{Mutex: new(sync.Mutex),
 		DCClientConnection: make(map[string]*FederaConsulClient),
 		AvalibleDCInfo:     make(map[string]*api.AgentMember),
 	}
 }
+
+//We need a global map so that it can be used by the policy
 
 //this function to create the KV client object for the any DC's address passed.
 func NewFederaConsulClient(DcEndPoint string, DCName string, isLeader bool) (*FederaConsulClient, bool) {
@@ -70,6 +53,9 @@ func (this *FederaConsulClient) CheckAndUpdateDCInfo(newAgentList []*api.AgentMe
 	for index, dcAgents := range newAgentList {
 		if strings.HasSuffix(dcAgents.Name, localDcName) != true {
 			if _, ok := this.DClist.AvalibleDCInfo[dcAgents.Name]; !ok {
+				//TODO: What if the connection to the remote KV goes off and comes back?
+				// We will trying to read/write to closed KV connection
+
 				//memebrs not found
 				//get the connection
 				this.GetNewClientConn(newAgentList[index])
@@ -80,12 +66,21 @@ func (this *FederaConsulClient) CheckAndUpdateDCInfo(newAgentList []*api.AgentMe
 	}
 }
 
+// WatchLocalStore is a blocking call this will return when the data is avaliable in
+// the KV store
+//
+
+func (this *FederaConsulClient) WatchLocalStore(prefix string) {
+
+}
+
 func (this *FederaConsulClient) GetNewClientConn(newAgentList *api.AgentMember) {
 
 	log.Println("Data centre name ", newAgentList.Name)
 	//need to parse the node name out of DC name
 	newAgentList.Name = strings.Split(newAgentList.Name, ".")[1]
 	log.Println("after split Data centre name ", newAgentList.Name)
+	//TODO: port is hard coded
 	newDcClient, ok := NewFederaConsulClient(newAgentList.Addr+":"+"8500", newAgentList.Name, false)
 	if !ok {
 		log.Println("Error in getting client connection to ", newAgentList.Name, " Failed to update the DC map ")
@@ -95,6 +90,11 @@ func (this *FederaConsulClient) GetNewClientConn(newAgentList *api.AgentMember) 
 	this.DClist.AvalibleDCInfo[newAgentList.Name] = newAgentList
 	this.DClist.DCClientConnection[newAgentList.Name] = newDcClient
 	this.DClist.Unlock()
+	//Update the global consul dc info pointer
+	//GlobalMutex.Lock()
+	//GlobalConsulDCInfo = FederaConsulClient
+	//GlobalMutex.Unlock()
+
 }
 
 //type NodeName string
@@ -126,9 +126,9 @@ func (this *FederaConsulClient) PopulatetheGlobalDCMap() bool {
 			return false
 		}
 
-		for range dcMembers {
-			//log.Println("List from all the dc's", val)
-		}
+		/*for range dcMembers {
+			log.Println("List from all the dc's", val)
+		}*/
 
 		log.Println("CheckAndUpdateDCInfo called")
 		this.CheckAndUpdateDCInfo(dcMembers, localDCName)

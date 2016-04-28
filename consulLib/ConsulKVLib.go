@@ -8,28 +8,37 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
-type KVData struct {
-	api.KVPairs
-	*api.QueryMeta
+// This be called when ever there is a new Consul client is created or updated
+// TODO: We need to handle the update case properly
+func (this *FederaConsulClient) UpdateAndSignalGlobalConsulInfo() {
+	GlobalConsulMutex.Lock()
+	GlobalConsulDCInfo = this
+	GlobalConsulMutex.Unlock()
+	// TODO: for now lets not signal
+	// We use use as is, later we might have to do something like this
+	// GlobalConsulDCChannel <- true
 }
 
-const Prefix = "Fedra"
-
-//this file will have all the kv store warps/decorator
-//this will have the list of ClientKV for the uderlying client
-
-//poll the local store and updaet the other DC's
+// This function will be only called be the consul Leader gossiper.
+// Poll's the local store and updaet the other DC's
 // StorePreFix Federa
 // TODO:blockFetch to use cas for fetching only when a new change is avaliable in the KV store
 // This function will be called only by Leader of the consul replicate
 func (this *FederaConsulClient) PollAndUpdateKV(blockFetch bool) {
 
 	log.Println("[INFO] PollAndUpdateKV: KV store dosent exist")
+	var waitIndex uint64
 	for {
 
 		//read from local store
-		if data := this.GetList(Prefix); data != nil {
-			log.Println("[INFO] PollAndUpdateKV: Data received")
+		log.Println("[INFO] PollAndUpdateKV: Data received", waitIndex)
+		data, res, err := this.GetList(Prefix, waitIndex)
+		if err == nil && data != nil {
+			log.Println("[INFO] PollAndUpdateKV: Data received", waitIndex)
+			if blockFetch == false {
+				//This when set to true we need to block till the data changes
+				waitIndex = res
+			}
 			this.UpdateKVAcrossDcs(data)
 		} else {
 			log.Println("[INFO] PollAndUpdateKV: KV store dosent exist")
@@ -42,16 +51,17 @@ func (this *FederaConsulClient) UpdateKVAcrossDcs(data *KVData) {
 	//TODO: expensive lock coz of nested loop
 	localWG := new(sync.WaitGroup)
 	this.DClist.Lock()
-	for _, dc := range this.DClist.DCClientConnection {
+	for dcName := range this.DClist.DCClientConnection {
 		//update all the DC's KV store in seperate goroutines
+		dc := this.DClist.DCClientConnection[dcName]
 		localWG.Add(1)
-		go func(wg *sync.WaitGroup) {
+		go func(wg *sync.WaitGroup, dc *FederaConsulClient) {
 			defer wg.Done()
 			for _, kvpair := range data.KVPairs {
 				dc.PutData(kvpair.Key, kvpair.Value)
 			}
 
-		}(localWG)
+		}(localWG, dc)
 		time.Sleep(5 * time.Second)
 	}
 	localWG.Wait()
@@ -59,20 +69,23 @@ func (this *FederaConsulClient) UpdateKVAcrossDcs(data *KVData) {
 }
 
 //GetDataFromLocalKVStore this will be used by the non-leader gossiper module
-func (this *FederaConsulClient) GetDataFromLocalKVStore() {
+func (this *FederaConsulClient) GetDataFromLocalKVStore(waitIndex uint64) (api.KVPairs, uint64, error) {
 
-	go func() {
-		for {
-			kvData := this.GetList(Prefix)
-			if kvData != nil {
-				log.Println("Data from the local store")
-				for _, val := range kvData.KVPairs {
-					log.Println("Data from the Local store", val.Key, string(val.Value))
-				}
-			}
-			<-time.After(time.Second * 2)
+	kvData, resultIndex, err := this.GetList(Prefix, waitIndex)
+	if err == nil && kvData != nil {
+		log.Println("Data from the local store", waitIndex)
+
+		for _, val := range kvData.KVPairs {
+			log.Println("Data from the Local store", val.Key, string(val.Value))
 		}
-	}()
+	} else {
+		log.Println("Either the data is null or error", err, kvData)
+		// if an error occurs return back the same WaitIndex so it re-tried
+		return nil, waitIndex, nil
+	}
+
+	return kvData.KVPairs, resultIndex, nil
+
 }
 
 func (this *FederaConsulClient) GetData(key string) []byte {
@@ -100,15 +113,21 @@ func (this *FederaConsulClient) PutData(key string, value []byte) (error, bool) 
 	return nil, true
 }
 
-func (this *FederaConsulClient) GetList(prefix string) *KVData {
+func (this *FederaConsulClient) GetList(prefix string, waitIndex uint64) (*KVData, uint64, error) {
 
-	newKVData := &KVData{}
-	KeyValuelist, KeyValueMeta, err := this.List(Prefix+"/", nil)
+	log.Println("GetList waitindex ", waitIndex)
+
+	q := &api.QueryOptions{}
+	q.WaitIndex = waitIndex
+	q.WaitTime = time.Duration(time.Hour * 1)
+	KeyValuelist, KeyValueMeta, err := this.List(Prefix+"/", q)
 	if err != nil {
 		log.Println("GetList failed", err, KeyValueMeta, this.Client)
-		return nil
+		//we pass on the same index when it fails to fetch from the KV store
+		// so that it can be re-tried
+		return nil, waitIndex, err
 	}
-
+	newKVData := &KVData{}
 	newKVData.KVPairs = KeyValuelist
 	newKVData.QueryMeta = KeyValueMeta
 	log.Println("GetList the total len of data", len(newKVData.KVPairs))
@@ -117,5 +136,6 @@ func (this *FederaConsulClient) GetList(prefix string) *KVData {
 		log.Println(string(val.Key), string(val.Value), val)
 	}
 
-	return newKVData
+	log.Println("GetList waitindex at END", KeyValueMeta.LastIndex)
+	return newKVData, KeyValueMeta.LastIndex, nil
 }
