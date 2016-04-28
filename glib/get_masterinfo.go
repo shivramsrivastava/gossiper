@@ -153,6 +153,9 @@ func GetMastersResources(G *Glib, MasterEP string) {
 		log.Printf("Our datacenter entry is not found yet")
 		mydc = &common.DC{}
 		mydc.Name = G.Name
+		mydc.Endpoint = common.ThisEP
+		mydc.Country = common.ThisCountry
+		mydc.City = common.ThisCity
 		common.ALLDCs.List[G.Name] = mydc
 	}
 

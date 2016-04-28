@@ -16,6 +16,8 @@ import (
 
 type GossiperConfig struct {
 	Name           string //Name of this gossiepr
+	City           string
+	Country        string
 	MasterEndPoint string //MesosMaster's IP address
 	ConfigType     string //What type of gossiper is this ? Join a federation or start a federation? Values = JOIN or NEW
 	JoinEndPoint   string //If we are joining an already runnig federatoin the what is the EndPoint?
@@ -37,6 +39,8 @@ func NewGossiperConfig() GossiperConfig {
 		TCPPort:        "5555",
 		GPort:          4444,
 		AdvertiseAddr:  "",
+		Country:        "China",
+		City:           "Shenzhen",
 	}
 }
 
@@ -76,6 +80,8 @@ func main() {
 	ProcessConfFile(*conffile, &config)
 
 	common.ThisDCName = config.Name
+	common.ThisCity = config.City
+	common.ThisCountry = config.Country
 
 	//Start Anon TCP server module
 	go anonlib.Run(config.MasterEndPoint, config.TCPPort)

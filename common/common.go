@@ -35,9 +35,12 @@ type toanon struct {
 
 //Declare somecommon types that will be used accorss the goroutines
 var (
-	ToAnon     toanon
-	ALLDCs     alldcs
-	ThisDCName string
+	ToAnon      toanon
+	ALLDCs      alldcs
+	ThisDCName  string
+	ThisEP      string
+	ThisCity    string
+	ThisCountry string
 )
 
 func init() {

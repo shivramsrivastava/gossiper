@@ -2,7 +2,7 @@ package glib
 
 import (
 	Q "container/list"
-	//"fmt"
+	"fmt"
 	"log"
 	"time"
 
@@ -125,7 +125,6 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string, 
 	wait = make(chan struct{})
 
 	//Create and Initalize the gossiper libraray
-	common.ThisDCName = name
 
 	//NewGlib(name string, zone string, new bool, ToJoin []string) *Glib {
 	g := NewGlib(name, myport, "", isnew, others, AdvertiseAddr)
@@ -143,6 +142,9 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string, 
 
 		log.Fatalf("Error unable to join other gossipers %v", err)
 	}
+
+	common.ThisDCName = name
+	common.ThisEP = fmt.Sprintf("http://%s:%d/v1/STATUS", g.AdvertiseAddr, g.BindPort)
 
 	//Start the goroutine that will examine the recived q and process
 	go ExamineFramework()
