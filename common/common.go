@@ -27,6 +27,11 @@ type alldcs struct {
 	List map[string]*DC
 }
 
+type rttbwGossipers struct {
+	Lck  sync.Mutex
+	List map[string]int64
+}
+
 type toanon struct {
 	Ch  chan bool
 	M   map[string]bool
@@ -35,12 +40,13 @@ type toanon struct {
 
 //Declare somecommon types that will be used accorss the goroutines
 var (
-	ToAnon      toanon
-	ALLDCs      alldcs
-	ThisDCName  string
-	ThisEP      string
-	ThisCity    string
-	ThisCountry string
+	ToAnon             toanon
+	ALLDCs             alldcs
+	ThisDCName         string
+	ThisEP             string
+	ThisCity           string
+	ThisCountry        string
+	RttOfPeerGossipers rttbwGossipers
 )
 
 func init() {
@@ -48,6 +54,7 @@ func init() {
 	ToAnon.M = make(map[string]bool)
 	ToAnon.Ch = make(chan bool)
 	ALLDCs.List = make(map[string]*DC)
+	RttOfPeerGossipers.List = make(map[string]int64)
 	fmt.Printf("Initalizeing Common")
 
 }

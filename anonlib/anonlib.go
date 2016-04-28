@@ -81,38 +81,37 @@ func NewaAnonConnection() *anonConnection {
 	return &anonConnection{}
 }
 
-func ConnectToServer(){
+func ConnectToServer() {
 
-  for{
-    log.Println("Starting the client")
-    DailtoServer()
-    <-time.After(5*time.Second)
-  }
+	for {
+		log.Println("Starting the client")
+		DailtoServer()
+		<-time.After(5 * time.Second)
+	}
 }
 
 func DailtoServer() {
 
-  flagChan:=make(chan bool)
+	flagChan := make(chan bool)
 	//Bind to all the network inteface int the system on the same port
 	tcpServer, err := net.Dial("tcp", ServerAddr+":"+ServerPort)
 	if err != nil {
 		log.Println(" Unable to connect to the server", err)
-    return
+		return
 	}
 	newAnonClientConn := NewaAnonConnection()
-	go newAnonClientConn.SendMsg(tcpServer,flagChan)
-	go newAnonClientConn.RecvMsg(tcpServer,flagChan)
-	go newAnonClientConn.SendHeartBeat(tcpServer,flagChan)
-  <-flagChan
-  //free the socket
+	go newAnonClientConn.SendMsg(tcpServer, flagChan)
+	go newAnonClientConn.RecvMsg(tcpServer, flagChan)
+	go newAnonClientConn.SendHeartBeat(tcpServer, flagChan)
+	<-flagChan
+	//free the socket
 
-  return
-
+	return
 
 }
 
 // SendMsg will wait on the Common.ToAnon
-func (annonClient *anonConnection) SendMsg(conn net.Conn,flagChan chan bool) {
+func (annonClient *anonConnection) SendMsg(conn net.Conn, flagChan chan bool) {
 	for {
 		<-common.ToAnon.Ch
 		result := BuildTheClientDataFromMap(common.ToAnon.M)
@@ -123,7 +122,7 @@ func (annonClient *anonConnection) SendMsg(conn net.Conn,flagChan chan bool) {
 		if err != nil {
 			log.Println("SednMsg: Unable to send data to client", err)
 			annonClient.Unlock()
-      flagChan <- true
+			flagChan <- true
 			return
 		}
 		log.Printf("SendMsg: Total bytes sent %d bytes", n)
@@ -139,7 +138,7 @@ func (annonClient *anonConnection) RecvMsg(conn net.Conn, flagChan chan bool) {
 		_, err := conn.Read(localClientBuf)
 		if err != nil {
 			log.Println("RecvMsg: Unable to read from the client", err, conn.RemoteAddr().String())
-    flagChan <- true
+			flagChan <- true
 			return
 		}
 		msgType := localClientBuf[0:1]
@@ -161,21 +160,21 @@ func (annonClient *anonConnection) SendHeartBeat(conn net.Conn, flagChan chan bo
 		annonClient.Unlock()
 		if err != nil {
 			log.Println("SendHeartBeat: Failed to send Heart Beat msg", err, conn.RemoteAddr().String())
-      flagChan <- true
-      return
+			flagChan <- true
+			return
 		}
 	}
 }
 
 func Run(inBindAddress string, inBindPort string) {
 
-  if inBindAddress != ""{
-	ServerAddr = strings.TrimRight(strings.TrimSpace(inBindAddress),":5050")
-  }
-  if inBindPort!=""{
-	ServerPort = inBindPort
-  }
-  ServerPort = "5555"
+	if inBindAddress != "" {
+		ServerAddr = strings.TrimRight(strings.TrimSpace(inBindAddress), ":5050")
+	}
+	if inBindPort != "" {
+		ServerPort = inBindPort
+	}
+	ServerPort = "5555"
 
 	log.Println("Starting the anonlib ")
 	log.Println("The master anon tcp server is", ServerAddr)
