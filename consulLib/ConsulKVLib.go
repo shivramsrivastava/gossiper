@@ -26,19 +26,21 @@ func (this *FederaConsulClient) UpdateAndSignalGlobalConsulInfo() {
 // This function will be called only by Leader of the consul replicate
 func (this *FederaConsulClient) PollAndUpdateKV(blockFetch bool) {
 
-	log.Println("[INFO] PollAndUpdateKV: KV store dosent exist")
+	log.Println("[INFO] PollAndUpdateKV: called")
 	var waitIndex uint64
 	for {
 
 		//read from local store
-		log.Println("[INFO] PollAndUpdateKV: Data received", waitIndex)
+
 		data, res, err := this.GetList(Prefix, waitIndex)
 		if err == nil && data != nil {
 			log.Println("[INFO] PollAndUpdateKV: Data received", waitIndex)
-			if blockFetch == false {
+			if blockFetch == true {
 				//This when set to true we need to block till the data changes
 				waitIndex = res
 			}
+			log.Println("[INFO] PollAndUpdateKV: Data received [o/p] new-index,old-index,data", res, waitIndex, data)
+
 			this.UpdateKVAcrossDcs(data)
 		} else {
 			log.Println("[INFO] PollAndUpdateKV: KV store dosent exist")
@@ -133,7 +135,7 @@ func (this *FederaConsulClient) GetList(prefix string, waitIndex uint64) (*KVDat
 	log.Println("GetList the total len of data", len(newKVData.KVPairs))
 	for _, val := range newKVData.KVPairs {
 
-		log.Println(string(val.Key), string(val.Value), val)
+		log.Println("Data recevived from GetList", string(val.Key), string(val.Value), val)
 	}
 
 	log.Println("GetList waitindex at END", KeyValueMeta.LastIndex)

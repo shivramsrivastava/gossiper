@@ -53,6 +53,8 @@ func (this *FederaConsulClient) CheckAndUpdateDCInfo(newAgentList []*api.AgentMe
 	for index, dcAgents := range newAgentList {
 		if strings.HasSuffix(dcAgents.Name, localDcName) != true {
 			if _, ok := this.DClist.AvalibleDCInfo[dcAgents.Name]; !ok {
+
+				log.Println("dcAgent name not found ", dcAgents.Name)
 				//TODO: What if the connection to the remote KV goes off and comes back?
 				// We will trying to read/write to closed KV connection
 
@@ -78,10 +80,10 @@ func (this *FederaConsulClient) GetNewClientConn(newAgentList *api.AgentMember) 
 
 	log.Println("Data centre name ", newAgentList.Name)
 	//need to parse the node name out of DC name
-	newAgentList.Name = strings.Split(newAgentList.Name, ".")[1]
+	newName := strings.Split(newAgentList.Name, ".")[1]
 	log.Println("after split Data centre name ", newAgentList.Name)
 	//TODO: port is hard coded
-	newDcClient, ok := NewFederaConsulClient(newAgentList.Addr+":"+"8500", newAgentList.Name, false)
+	newDcClient, ok := NewFederaConsulClient(newAgentList.Addr+":"+"8500", newName, false)
 	if !ok {
 		log.Println("Error in getting client connection to ", newAgentList.Name, " Failed to update the DC map ")
 		return
@@ -124,9 +126,9 @@ func (this *FederaConsulClient) PopulatetheGlobalDCMap() bool {
 			log.Println("err list from members", err)
 			return false
 		}
-		for _, val := range dcMembers {
+		/*for _, val := range dcMembers {
 			log.Println("List from all the dc's", val)
-		}
+		}*/
 
 		log.Println("CheckAndUpdateDCInfo called")
 		this.CheckAndUpdateDCInfo(dcMembers, localDCName)

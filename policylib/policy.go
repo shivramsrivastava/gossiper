@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -24,6 +25,7 @@ var (
 // Policy runs only when there is change in the DC info from the gosspier
 // or when there is a change in the Consul KV "Fedra" store
 func ListenAllDcDataChn() {
+	//<-
 
 }
 
@@ -38,16 +40,23 @@ func ListenDcConsulList() {
 // Its tricky to actually make a block call on the consul looking for a KV prefix
 // If there is not such KV store we create one with the /Fedra with some data/no data
 // we then use the modified index from that store for later block
-func ListenConsulKV(Prefix string, wg *sync.WaitGroup) {
+func ListenConsulKV(Prefix string, wg *sync.WaitGroup, config *common.ConsulConfig) {
 
 	var waitIndex uint64
 
 	// This is a blocking call since we need to watch the store for any new policy change
 	// and notify processNewPloicy
+
 	for {
 
 		//GlobalConsulDCInfo should have valid consul client connections
-		KVPairs, nextWaitIndex, err := consulLib.GlobalConsulDCInfo.GetDataFromLocalKVStore(waitIndex)
+
+		if dcConsulList == nil {
+			log.Println("dcConsulList global consullist is empty")
+			os.Exit(0)
+		}
+
+		KVPairs, nextWaitIndex, err := dcConsulList.GetDataFromLocalKVStore(waitIndex)
 
 		if err != nil {
 			log.Println("ListenConsulKV: Watch on local store failes", err)
@@ -56,20 +65,24 @@ func ListenConsulKV(Prefix string, wg *sync.WaitGroup) {
 		} else {
 			waitIndex = nextWaitIndex
 			for _, value := range KVPairs {
-				log.Println("ListenConsulKV: Got the following data from consul")
+				log.Println("ListenConsulKV: Got the following data from consul current and new wait index", waitIndex, nextWaitIndex)
+				log.Println(string(value.Key), string(value.Value))
 				processNewPolicy(value.Key, value.Value)
 
 			}
 
 		}
+
+		<-time.After(2 * time.Second)
 	}
 }
 
+//RuleThreshold
 func GetCorrectRuleType(name string) interface{} {
 
 	if strings.Contains(name, "Distance") == true {
 		return &RuleDistance{}
-	} else if strings.Contains(name, "Distance") == true {
+	} else if strings.Contains(name, "Threshold") == true {
 		return &RuleThreshold{}
 	} else {
 		log.Println("GetCorrectRuleType: No Rule Type found for", name)
@@ -114,14 +127,9 @@ func processNewPolicy(key string, data []byte) error {
 // polcy will be working with the stale data....
 func init() {
 	//newData := &DCData{}
-	common.ALLDCs.Lck.Lock()
-	//newData.dcDataList = common.ALLDCs.List
-	dcDataList = common.ALLDCs.List
-	common.ALLDCs.Lck.Unlock()
 
-	consulLib.GlobalConsulMutex.Lock()
-	dcConsulList = consulLib.GlobalConsulDCInfo
-	consulLib.GlobalConsulMutex.Unlock()
+	log.Println("Policy Init called")
+
 }
 
 // This interface defines the behaviour of a rule
@@ -137,6 +145,7 @@ type PolicyConsul struct {
 // A Group of rules which forms a policy
 //
 type Policy struct {
+	Name  string //name of the policy which will be the key in our case
 	Rules []Rule
 }
 
@@ -191,11 +200,36 @@ func CreateMockRuleArray() []Rule {
 	return dummy
 }
 
-func Run(prefix string) {
+func getTheConsulAndDCpointers() {
+
+	for {
+
+		log.Println("Lopping thorugh to get the global maps")
+
+		common.ALLDCs.Lck.Lock()
+		//newData.dcDataList = common.ALLDCs.List
+		dcDataList = common.ALLDCs.List
+		common.ALLDCs.Lck.Unlock()
+
+		consulLib.GlobalConsulMutex.Lock()
+		dcConsulList = consulLib.GlobalConsulDCInfo
+		consulLib.GlobalConsulMutex.Unlock()
+
+		if dcDataList != nil && dcConsulList != nil {
+			log.Println("getTheConsulAndDCpointers: got", dcDataList, dcConsulList)
+			break
+		}
+
+		<-time.After(2 * time.Second)
+	}
+	return
+}
+
+func Run(prefix string, config *common.ConsulConfig) {
 
 	localwg := &sync.WaitGroup{}
+	getTheConsulAndDCpointers()
 	localwg.Add(1)
-	go ListenConsulKV(prefix, localwg)
+	go ListenConsulKV(prefix, localwg, config)
 	localwg.Wait()
-
 }
