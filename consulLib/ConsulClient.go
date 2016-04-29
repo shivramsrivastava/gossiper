@@ -119,16 +119,14 @@ func (this *FederaConsulClient) PopulatetheGlobalDCMap() bool {
 	localDCName := localDCInfo["Config"]["Datacenter"].(string)
 	log.Println("[INFO] Localagent name", localDCName)
 	for {
-
 		dcMembers, err := clientAgent.Members(true)
 		if err != nil {
 			log.Println("err list from members", err)
 			return false
 		}
-
-		/*for range dcMembers {
+		for _, val := range dcMembers {
 			log.Println("List from all the dc's", val)
-		}*/
+		}
 
 		log.Println("CheckAndUpdateDCInfo called")
 		this.CheckAndUpdateDCInfo(dcMembers, localDCName)

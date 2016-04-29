@@ -72,8 +72,8 @@ func Run(config *common.ConsulConfig, DCName string) {
 		// We dont need this else part.
 		// Since all the gossiper need to read the local store for the policy update.
 		// Leader dosent one thing in addition.
-
-		log.Println("[INFO]:Starting the consul replicate Client")
+		//log.Println("[INFO]:Starting the consul replicate Client")
+		log.Println("[INFO]:Current gossiper is not a client so not starting the consul replicate server")
 		//go newConsulClient.GetDataFromLocalKVStore()
 	}
 	//We pass the reference to the local client KV store
