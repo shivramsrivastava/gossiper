@@ -76,7 +76,20 @@ func main() {
 
 	//Try to parse the config file
 	conffile := flag.String("config", "./config.json", "Supply the location of MrRedis configuration file")
+	dummyConfig := flag.Bool("printDummyConfig", false, "IF you want to print the default(false) config")
 	flag.Parse()
+
+	//
+	if *dummyConfig == true {
+		config_byte, err := json.MarshalIndent(config, " ", "  ")
+		if err != nil {
+			log.Printf("Error Marshalling the default config file %v", err)
+			return
+		}
+		fmt.Printf("%s\n", string(config_byte))
+		return
+	}
+
 	ProcessConfFile(*conffile, &config)
 
 	common.ThisDCName = config.Name
