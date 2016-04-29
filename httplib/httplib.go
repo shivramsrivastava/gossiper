@@ -22,11 +22,35 @@ type StatusResponse struct {
 	UCPU, UMEM, UDISK float64 //Used CPU MEM and DISK
 	OutOfResource     bool
 }
+type LatencyResponse struct {
+	Name string
+	Rtt  int64
+}
 
 type MainController struct {
 	beego.Controller
 }
 
+func (this *MainController) LatencyAll() {
+	var resp []LatencyResponse
+	common.RttOfPeerGossipers.Lck.Lock()
+	defer common.RttOfPeerGossipers.Lck.Unlock()
+	for k, v := range common.RttOfPeerGossipers.List {
+		var c LatencyResponse
+		c.Name = k
+		c.Rtt = v
+		resp = append(resp, c)
+	}
+	resp_byte, err := json.MarshalIndent(&resp, "", "  ")
+	if err != nil {
+
+		log.Printf("Error Marshalling the response")
+		this.Ctx.WriteString("Latency Failed")
+		return
+	}
+	this.Ctx.WriteString(string(resp_byte))
+	log.Printf("HTTP Latency Response %s", string(resp_byte))
+}
 func (this *MainController) StatusAll() {
 	var res StatusResponse
 

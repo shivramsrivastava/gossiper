@@ -4,6 +4,7 @@ import (
 	Q "container/list"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	ml "github.com/hashicorp/memberlist"
@@ -15,6 +16,7 @@ type ML_interface interface {
 	Join([]string) (int, error)
 	Leave(time.Duration) error
 	Members() []*ml.Node
+	Ping(node string, addr net.Addr) (time.Duration, error)
 }
 
 //Glib is short for GossipLibrary
@@ -161,9 +163,31 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string, 
 		case <-time.After(time.Second * 10):
 			log.Printf("Ten Seconds elapsed for %s", g.Name)
 			//g.BC.QueueBroadcast(NewBroadcast(fmt.Sprintf("%s:%v", g.Name, time.Now())))
+			g.UpdateRTT()
+
 		}
-
 	}
-
 	<-wait
+}
+
+func (g *Glib)UpdateRTT() {
+	nodes := g.list.Members()
+
+	common.RttOfPeerGossipers.Lck.Lock()
+	defer common.RttOfPeerGossipers.Lck.Unlock()
+
+	for _, val := range nodes {
+		if g.Name != val.Name { //only to peers not self
+			duration, err := g.list.Ping(val.Name, &net.TCPAddr{IP: val.Addr, Port: (int)(val.Port)})
+			log.Printf("The rtt between this node to peer %s is %d", val.Name, duration)
+			if err != nil {
+				log.Printf("g.list.Ping failed for peer :%s with err:%s", val.Name, err)
+				return
+			}
+
+			//duration in micro seconds
+			log.Printf("The rtt between this node to peer %s is %d", val.Name, duration)
+			common.RttOfPeerGossipers.List[val.Name] = (int64)(duration / time.Microsecond)
+		}
+	}
 }
