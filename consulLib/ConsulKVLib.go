@@ -121,7 +121,7 @@ func (this *FederaConsulClient) GetList(prefix string, waitIndex uint64) (*KVDat
 
 	q := &api.QueryOptions{}
 	q.WaitIndex = waitIndex
-	q.WaitTime = time.Duration(time.Hour * 1)
+	q.WaitTime = time.Duration(time.Minute * 60)
 	KeyValuelist, KeyValueMeta, err := this.List(Prefix+"/", q)
 	if err != nil {
 		log.Println("GetList failed", err, KeyValueMeta, this.Client)
