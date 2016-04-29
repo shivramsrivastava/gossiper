@@ -74,6 +74,7 @@ func Run(config *common.ConsulConfig, DCName string) {
 		// Leader dosent one thing in addition.
 		//log.Println("[INFO]:Starting the consul replicate Client")
 		log.Println("[INFO]:Current gossiper is not a client so not starting the consul replicate server")
+		return
 		//go newConsulClient.GetDataFromLocalKVStore()
 	}
 	//We pass the reference to the local client KV store

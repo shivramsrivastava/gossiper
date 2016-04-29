@@ -112,7 +112,7 @@ func main() {
 
 	//start consul client
 	go consulLib.Run(&config.ConsulConfig, config.Name)
-	go policylib.Run("Fedra", &config.ConsulConfig)
+	go policylib.Run(config.ConsulConfig.StorePreFix, &config.ConsulConfig)
 
 	//Start the Policy Engine module
 	//PE.Run()
