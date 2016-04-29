@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"../common"
 	"../consulLib"
-	"github.com/hashicorp/consul/api"
 )
 
+type dcData map[string]*common.DC
+
 var (
-	dcDataList   map[string]*common.DC
-	dcConsulList *FederaConsulClient
+	dcDataList   dcData
+	dcConsulList *consulLib.FederaConsulClient
 )
 
 // Policy runs only when there is change in the DC info from the gosspier
@@ -29,78 +31,83 @@ func ListenAllDcDataChn() {
 // TODO: We will read the Consul DC data and update the global pointer dcConsulList
 // This has to be controlled via a mutex.
 // But for now we dont lock while reading.
-func ListenDcConsulList(){
-	<-
+func ListenDcConsulList() {
+	//<-
 }
 
 // Its tricky to actually make a block call on the consul looking for a KV prefix
 // If there is not such KV store we create one with the /Fedra with some data/no data
 // we then use the modified index from that store for later block
-func ListenConsulKV(string Prefix) {
+func ListenConsulKV(Prefix string, wg *sync.WaitGroup) {
 
 	var waitIndex uint64
 
-   // This is a blocking call since we need to watch the store for any new policy change
-   // and notify processNewPloicy
-	for{
+	// This is a blocking call since we need to watch the store for any new policy change
+	// and notify processNewPloicy
+	for {
 
 		//GlobalConsulDCInfo should have valid consul client connections
-	KVPairs, nextWaitIndex, err:=consulLib.GlobalConsulDCInfo.GetDataFromLocalKVStore(waitIndex)
+		KVPairs, nextWaitIndex, err := consulLib.GlobalConsulDCInfo.GetDataFromLocalKVStore(waitIndex)
 
-	if err!=nil{
-		log.Println("ListenConsulKV: Watch on local store failes",err)
-		//TODO: We just continue for now
-		continue
-		}else{
-			waitIndex= nextWaitIndex
-
-			for ,_:=range KVPairs. {
+		if err != nil {
+			log.Println("ListenConsulKV: Watch on local store failes", err)
+			//TODO: We just continue for now
+			continue
+		} else {
+			waitIndex = nextWaitIndex
+			for _, value := range KVPairs {
+				log.Println("ListenConsulKV: Got the following data from consul")
+				processNewPolicy(value.Key, value.Value)
 
 			}
 
 		}
-}
-}
-
-func GetCorrectRuleType(name string) interface{
-
-	if strings.Contains(name,"Distance"){
-		return &RuleDistance{}
-	}else if strings.Contains(name,"Distance"){
-		return &RuleThreshold{}
-	}else{
-		log.Println("GetCorrectRuleType: No Rule Type found for",name)
 	}
-return nil
+}
+
+func GetCorrectRuleType(name string) interface{} {
+
+	if strings.Contains(name, "Distance") == true {
+		return &RuleDistance{}
+	} else if strings.Contains(name, "Distance") == true {
+		return &RuleThreshold{}
+	} else {
+		log.Println("GetCorrectRuleType: No Rule Type found for", name)
+	}
+	return nil
 
 }
 
-func processNewPolicy(data []byte) error{
-	var tempPolicy Policy
-	err:=json.Unmarshal(data, &tempPolicy)
+//processNewPolicy if successfuly processed the policy will be store in a gloable map for
+// further processing
+// TODO: We need an representaion for the action taken by the policy.
 
-	if err != nil{
-		log.Println("processNewPolicy: Unable to unmarshal the processNewPolicy",err)
+func processNewPolicy(key string, data []byte) error {
+	tempPolicy := Policy{}
+	err := json.Unmarshal(data, &tempPolicy)
+
+	if err != nil {
+		log.Println("processNewPolicy: Unable to unmarshal the processNewPolicy", err)
 		return err
 	}
 
-for _,values := range tempPolicy.Rules {
+	for index, values := range tempPolicy.Rules {
 
-	dummy:=FakeJsonRule{}
-	ruleType:=GetCorrectRuleType(values.Name)
-	if ruleType !=nil{
-	dummy.Content = ruleType
-	err:=json.Unmarshal(data, &dummy)
-	if err!=nil{
-		log.Println("processNewPolicy: Unable to get the content from the json")
+		dummy := FakeJsonRule{}
+		ruleType := GetCorrectRuleType(values.Name)
+		if ruleType != nil {
+			dummy.Content = ruleType
+			err := json.Unmarshal(data, &dummy)
+			if err != nil {
+				log.Println("processNewPolicy: Unable to get the content from the json")
+			}
+			tempPolicy.Rules[index].Content = dummy.Content
+
+		}
 	}
-	tempPolicy.Content=dummy.Content
 
-	}
+	return nil
 }
-}
-
-
 
 // Create a new Data
 // TODO: but this ALLDCs.List will be changing all the time
@@ -108,22 +115,23 @@ for _,values := range tempPolicy.Rules {
 func init() {
 	//newData := &DCData{}
 	common.ALLDCs.Lck.Lock()
-	newData.dcDataList = common.ALLDCs.List
-	common.ALLDCs.Lck.UnLock()
+	//newData.dcDataList = common.ALLDCs.List
+	dcDataList = common.ALLDCs.List
+	common.ALLDCs.Lck.Unlock()
 
-    GlobalConsulMutex.Lock()
-    newData.dcConsulList = GlobalConsulDCInfo
-    GlobalConsulMutex.Unlock()
+	consulLib.GlobalConsulMutex.Lock()
+	dcConsulList = consulLib.GlobalConsulDCInfo
+	consulLib.GlobalConsulMutex.Unlock()
 }
 
 // This interface defines the behaviour of a rule
 // All rule typr must implement this rule
 type RuleInterface interface {
-	ApplyRule([]DCData) []DCData
+	ApplyRule([]dcData) []dcData
 }
 
 type PolicyConsul struct {
-	*FederaConsulClient
+	*consulLib.FederaConsulClient
 }
 
 // A Group of rules which forms a policy
@@ -158,7 +166,7 @@ type Rule struct {
 }
 
 type FakeJsonRule struct {
-	Content  interface{} // this represt the actual data for the rule, this can be of any type
+	Content interface{} // this represt the actual data for the rule, this can be of any type
 }
 
 // ApplyPriority sorts the rule based on priority
@@ -185,30 +193,9 @@ func CreateMockRuleArray() []Rule {
 
 func Run(prefix string) {
 
-
-
-}
-
-func main() {
-
-	//simple := make([]Rule, 5)
-	//s.Name = "Rule_One"
-	var s Policy
-
-	s.Rules = CreateMockRuleArray()
-
-	file, err := os.Create("polic.json")
-	if err != nil {
-		log.Println(err)
-	}
-
-	x, err := json.Marshal(s)
-	if err != nil {
-		log.Println(err)
-	}
-	file.Write(x)
-	fmt.Println(string(x), err, file.Name())
-	s.ApplyPriority()
-	s.ApplyPriority()
+	localwg := &sync.WaitGroup{}
+	localwg.Add(1)
+	go ListenConsulKV(prefix, localwg)
+	localwg.Wait()
 
 }

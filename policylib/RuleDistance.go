@@ -1,5 +1,7 @@
 package policylib
 
+import "log"
+
 type DistanceType string
 
 const (
@@ -11,17 +13,21 @@ type RuleDistance struct {
 	DistanceType string
 }
 
-func (this *RuleDistance) GetNearest(data []DCData) []DCData {
+func (this *RuleDistance) GetNearest(data dcData) dcData {
+	log.Println("GetNearest: Applying the Nearest rule")
 
 	return nil
 }
 
-func (this *RuleDistance) GetFarthest(data []DCData) []DCData {
+func (this *RuleDistance) GetFarthest(data dcData) dcData {
+	log.Println("GetNearest: Applying the farthest rule")
 	return nil
 }
 
-func (this *RuleDistance) ApplyRule(data []DCData) []DCData {
-	switch this.Type {
+func (this *RuleDistance) ApplyRule(data dcData) dcData {
+
+	log.Println("ApplyRule: Applying the rule for RuleDistance")
+	switch this.DistanceType {
 	case NEAREST:
 		return this.GetNearest(data)
 	case FARTHEST:
