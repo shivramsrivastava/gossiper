@@ -40,6 +40,7 @@ func ListenDcConsulList() {
 // Its tricky to actually make a block call on the consul looking for a KV prefix
 // If there is not such KV store we create one with the /Fedra with some data/no data
 // we then use the modified index from that store for later block
+// config is passed to get the consul KV config directly
 func ListenConsulKV(Prefix string, wg *sync.WaitGroup, config *common.ConsulConfig) {
 
 	var waitIndex uint64
@@ -56,24 +57,26 @@ func ListenConsulKV(Prefix string, wg *sync.WaitGroup, config *common.ConsulConf
 			os.Exit(0)
 		}
 
-		KVPairs, nextWaitIndex, err := dcConsulList.GetDataFromLocalKVStore(waitIndex)
+		KVPairs, nextWaitIndex, err := dcConsulList.GetList(Prefix, waitIndex)
+		//dcConsulList.GetDataFromLocalKVStore(waitIndex)
 
 		if err != nil {
 			log.Println("ListenConsulKV: Watch on local store failes", err)
 			//TODO: We just continue for now
-			continue
+
 		} else {
+			log.Println("ListenConsulKV: Got the following data from consul current and new wait index", waitIndex, nextWaitIndex)
 			waitIndex = nextWaitIndex
-			for _, value := range KVPairs {
-				log.Println("ListenConsulKV: Got the following data from consul current and new wait index", waitIndex, nextWaitIndex)
-				log.Println(string(value.Key), string(value.Value))
+			for _, value := range KVPairs.KVPairs {
+
+				log.Println("ListenConsulKV: key and value ", string(value.Key), string(value.Value))
 				processNewPolicy(value.Key, value.Value)
 
 			}
 
 		}
 
-		<-time.After(2 * time.Second)
+		<-time.After(20 * time.Second)
 	}
 }
 
@@ -115,6 +118,7 @@ func processNewPolicy(key string, data []byte) error {
 				log.Println("processNewPolicy: Unable to get the content from the json")
 			}
 			tempPolicy.Rules[index].Content = dummy.Content
+			log.Println("processNewPolicy: info", tempPolicy)
 
 		}
 	}
