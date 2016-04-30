@@ -83,6 +83,7 @@ func GetListofFrameworks(G *Glib, MasterEP string) {
 		this_frmwrk[id] = false
 
 	}
+	G.BroadCast(GossipFrameworks(G.Name))
 }
 
 func GetMastersResources(G *Glib, MasterEP string) {
@@ -190,6 +191,26 @@ func GossipDCInfo(G *Glib, dc *common.DC) {
 	}
 }
 
+func GossipFrameworks(Name string) []byte {
+
+	var msg Msg
+	var FW FrameWorkMsG
+
+	msg.Name = Name
+
+	gmap, isvalid := AllFrameworks[Name]
+	if isvalid {
+		for name := range gmap {
+			FW.FrameWorks = append(FW.FrameWorks, name)
+		}
+	}
+
+	msg.Body = &FW
+	data, _ := json.Marshal(msg)
+
+	return data
+}
+
 func CollectMasterData(G *Glib, MasterEP string) {
 
 	//First get the channels initialized
@@ -211,24 +232,4 @@ func CollectMasterData(G *Glib, MasterEP string) {
 
 		}
 	}
-}
-
-func GossipFrameworks(Name string) []byte {
-
-	var msg Msg
-	var FW FrameWorkMsG
-
-	msg.Name = Name
-
-	gmap, isvalid := AllFrameworks[Name]
-	if isvalid {
-		for name := range gmap {
-			FW.FrameWorks = append(FW.FrameWorks, name)
-		}
-	}
-
-	msg.Body = &FW
-	data, _ := json.Marshal(msg)
-
-	return data
 }
