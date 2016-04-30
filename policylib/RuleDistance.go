@@ -13,26 +13,26 @@ type RuleDistance struct {
 	DistanceType string
 }
 
-func (this *RuleDistance) GetNearest(data dcData) dcData {
+func (this *RuleDistance) GetNearest(policydecision *PolicyDecision) bool {
 	log.Println("GetNearest: Applying the Nearest rule")
 
-	return nil
+	return true
 }
 
-func (this *RuleDistance) GetFarthest(data dcData) dcData {
+func (this *RuleDistance) GetFarthest(policydecision *PolicyDecision) bool {
 	log.Println("GetNearest: Applying the farthest rule")
-	return nil
+	return true
 }
 
-func (this *RuleDistance) ApplyRule(data dcData) dcData {
+func (this *RuleDistance) ApplyRule(policydecision *PolicyDecision) bool {
 
 	log.Println("ApplyRule: Applying the rule for RuleDistance")
 	switch this.DistanceType {
 	case NEAREST:
-		return this.GetNearest(data)
+		return this.GetNearest(policydecision)
 	case FARTHEST:
-		return this.GetFarthest(data)
+		return this.GetFarthest(policydecision)
 	}
 
-	return nil
+	return true
 }

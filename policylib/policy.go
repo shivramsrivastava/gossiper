@@ -22,6 +22,113 @@ var (
 	dcConsulList *consulLib.FederaConsulClient
 )
 
+// This interface defines the behaviour of a rule
+// All rule typr must implement this rule
+type RuleInterface interface {
+	ApplyRule(*PolicyDecision) bool
+}
+
+type PolicyConsul struct {
+	*consulLib.FederaConsulClient
+}
+
+// A Group of rules which forms a policy
+//
+type Policy struct {
+	Name  string //name of the policy which will be the key in our case
+	Rules []Rule
+}
+
+//Rule are applied based on the rule priority
+//it represents one single rule
+// Note: If all the rules have the same priority picks the one which our sort function returns.
+type Rule struct {
+	Name string //this should hold the name of the datatype/struct which will be used to
+	//instiantiate the type
+
+	Priority int         // it should be between 1-10 this 10 being highest
+	Scope    string      // global scope/local scope
+	Content  interface{} // this represt the actual data for the rule, this can be of any type
+}
+
+type FakeJsonRuleContent struct {
+	Content interface{} // this represt the actual data for the rule, this can be of any type
+}
+
+type PolicyDecision struct {
+	//after applying all the policy
+	SortedDCName     []string  //will have all the sorted dc index 0 is the one which need to be get offers rest suppressed
+	LastDecisionTime time.Time // last time this policy decision was taken
+	SortValue        []float64
+	// can be later use to refresh the same
+}
+
+func NewPolicyDecision() *PolicyDecision {
+	return &PolicyDecision{}
+}
+
+func (this *Policy) ApplyPolicyDecisionOnRules(runleinterface RuleInterface) {
+
+}
+
+func (this *Policy) TakeDecision() bool {
+
+	//create a new policy decision
+	var ok bool
+	var ruleInterface RuleInterface
+	newDecision := NewPolicyDecision()
+
+	newDecision.SortedDCName, ok = GetDCDataInSortedOrderByDcName()
+	if ok != true {
+		log.Println("TakeDecision: Unable to take a decision sort on DC's failed")
+	}
+	//apply priority
+	ok = this.ApplyPriority()
+	if ok != true {
+		log.Println("TakeDecision: Apply priority failes on Policy")
+	}
+	for _, rule := range this.Rules {
+		ruleInterface, ok = rule.Content.(RuleInterface)
+		if ok != true {
+			log.Println("TakeDecision: unable to get the Rule failed to convert to RuleInterface")
+			return false
+		}
+		//this.ApplyPolicyDecisionOnRules(rule.Content)
+		ok := ruleInterface.ApplyRule(newDecision)
+		if ok != true {
+			log.Println("TakeDecision: Applying rule failes", rule.Name, newDecision.SortedDCName)
+		}
+
+	}
+	//newDecision.SortedDCName[0]//will be the curent one to get offers
+
+	return true
+}
+
+//GetDCDataInSortedOrderByDcName
+// this will sort the dc names in
+//
+func GetDCDataInSortedOrderByDcName() ([]string, bool) {
+
+	if len(dcDataList) == 0 {
+		log.Println("GetDCDataInSortedOrderByDcName: the common DC maps is empty")
+		return nil, false
+	}
+
+	dcDataSortedList := make([]string, len(dcDataList))
+
+	i := 0
+	for key := range dcDataList {
+		dcDataSortedList[i] = key
+		i++
+	}
+
+	sort.Strings(dcDataSortedList)
+
+	return dcDataSortedList, true
+
+}
+
 // Policy runs only when there is change in the DC info from the gosspier
 // or when there is a change in the Consul KV "Fedra" store
 func ListenAllDcDataChn() {
@@ -70,8 +177,14 @@ func ListenConsulKV(Prefix string, wg *sync.WaitGroup, config *common.ConsulConf
 			for _, value := range KVPairs.KVPairs {
 
 				log.Println("ListenConsulKV: key and value ", string(value.Key), string(value.Value))
-				if err := processNewPolicy(value.Key, value.Value); err != nil {
+				newPolicy, err := processNewPolicy(value.Key, value.Value)
+				if err != nil {
 					log.Println("ListenConsulKV: processNewPolicy failed ", err)
+				} else {
+					ok := newPolicy.TakeDecision()
+					if ok != true {
+						log.Println("ListenConsulKV: TakeDecision on new policy ", newPolicy, " failed")
+					}
 				}
 
 			}
@@ -100,25 +213,25 @@ func GetCorrectRuleType(name string) interface{} {
 // further processing
 // TODO: We need an representaion for the action taken by the policy.
 
-func processNewPolicy(key string, data []byte) error {
-	tempPolicy := Policy{}
+func processNewPolicy(key string, data []byte) (*Policy, error) {
+	tempPolicy := &Policy{}
 	err := json.Unmarshal(data, &tempPolicy)
 
 	if err != nil {
 		log.Println("processNewPolicy: Unable to unmarshal the processNewPolicy", err)
-		return err
+		return nil, err
 	}
 
 	for index, values := range tempPolicy.Rules {
 
-		dummy := FakeJsonRule{}
+		dummy := FakeJsonRuleContent{}
 		ruleType := GetCorrectRuleType(values.Name)
 		if ruleType != nil {
 			dummy.Content = ruleType
 			err := json.Unmarshal(data, &dummy)
 			if err != nil {
 				log.Println("processNewPolicy: Unable to get the content from the json")
-				return err
+				return nil, err
 			}
 			tempPolicy.Rules[index].Content = dummy.Content
 			log.Println("processNewPolicy: info", tempPolicy)
@@ -126,7 +239,7 @@ func processNewPolicy(key string, data []byte) error {
 		}
 	}
 
-	return nil
+	return tempPolicy, nil
 }
 
 // Create a new Data
@@ -137,23 +250,6 @@ func init() {
 
 	log.Println("Policy Init called")
 
-}
-
-// This interface defines the behaviour of a rule
-// All rule typr must implement this rule
-type RuleInterface interface {
-	ApplyRule([]dcData) []dcData
-}
-
-type PolicyConsul struct {
-	*consulLib.FederaConsulClient
-}
-
-// A Group of rules which forms a policy
-//
-type Policy struct {
-	Name  string //name of the policy which will be the key in our case
-	Rules []Rule
 }
 
 func (this *Policy) Len() int {
@@ -169,32 +265,21 @@ func (this *Policy) Swap(i, j int) {
 	this.Rules[i], this.Rules[j] = this.Rules[j], this.Rules[i]
 }
 
-//Rule are applied based on the rule priority
-//it represents one single rule
-// Note: If all the rules have the same priority picks the one which our sort function returns.
-type Rule struct {
-	Name string //this should hold the name of the datatype/struct which will be used to
-	//instiantiate the type
-
-	Priority int         // it should be between 1-10 this 10 being highest
-	Scope    string      // global scope/local scope
-	Content  interface{} // this represt the actual data for the rule, this can be of any type
-}
-
-type FakeJsonRule struct {
-	Content interface{} // this represt the actual data for the rule, this can be of any type
-}
-
 // ApplyPriority sorts the rule based on priority
 // A rule with priority 10 gets the max piority
 //
-func (this *Policy) ApplyPriority() {
-	//sort the rules based on priority
+func (this *Policy) ApplyPriority() bool {
+	//sort the rules based on priorityA
+
+	if this.Len() == 0 {
+		log.Println("ApplyPriority: The rules array is nil")
+		return false
+	}
 	fmt.Println(this)
 	sort.Sort(this)
 	fmt.Println("After", this)
 
-	//return nil
+	return true
 }
 
 func CreateMockRuleArray() []Rule {
