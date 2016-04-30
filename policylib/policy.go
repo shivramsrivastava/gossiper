@@ -70,7 +70,9 @@ func ListenConsulKV(Prefix string, wg *sync.WaitGroup, config *common.ConsulConf
 			for _, value := range KVPairs.KVPairs {
 
 				log.Println("ListenConsulKV: key and value ", string(value.Key), string(value.Value))
-				processNewPolicy(value.Key, value.Value)
+				if err := processNewPolicy(value.Key, value.Value); err != nil {
+					log.Println("ListenConsulKV: processNewPolicy failed ", err)
+				}
 
 			}
 
@@ -116,6 +118,7 @@ func processNewPolicy(key string, data []byte) error {
 			err := json.Unmarshal(data, &dummy)
 			if err != nil {
 				log.Println("processNewPolicy: Unable to get the content from the json")
+				return err
 			}
 			tempPolicy.Rules[index].Content = dummy.Content
 			log.Println("processNewPolicy: info", tempPolicy)
