@@ -63,7 +63,7 @@ func init() {
 
 	ToAnon.M = make(map[string]bool)
 	ToAnon.Ch = make(chan bool)
-	TriggerPolicy = make(chan bool)
+	TriggerPolicyCh = make(chan bool)
 	ALLDCs.List = make(map[string]*DC)
 	ResourceThresold = 100
 	RttOfPeerGossipers.List = make(map[string]int64)
@@ -73,7 +73,7 @@ func init() {
 
 func SupressFrameWorks() {
 	ToAnon.Lck.Lock()
-	for k, v := range ToAnon.M {
+	for k, _ := range ToAnon.M {
 		ToAnon.M[k] = false
 	}
 	ToAnon.Lck.Unlock()
@@ -82,7 +82,7 @@ func SupressFrameWorks() {
 }
 func UnSupressFrameWorks() {
 	ToAnon.Lck.Lock()
-	for k, v := range ToAnon.M {
+	for k, _ := range ToAnon.M {
 		ToAnon.M[k] = true
 	}
 	ToAnon.Lck.Unlock()

@@ -60,7 +60,7 @@ func (d *delegate) NotifyMsg(buf []byte) {
 			return
 		}
 		log.Printf("A DC reported OOR %v", msg)
-		common.ResourceThresold <- true
+		common.TriggerPolicyCh <- true
 
 	case "DC":
 		var dc common.DC

@@ -181,11 +181,11 @@ func GetMastersResources(G *Glib, MasterEP string) {
 func CheckThreshold(G *Glib, dc *common.DC) {
 
 	var isOOR bool
-	isOOR = CheckPercentage(mydc.CPU, mydc.Ucpu, common.ResourseThreshold)
+	isOOR = CheckPercentage(dc.CPU, dc.Ucpu, common.ResourceThresold)
 	if !isOOR {
-		isOOR = CheckPercentage(mydc.MEM, mydc.Umem, common.ResourseThreshold)
+		isOOR = CheckPercentage(dc.MEM, dc.Umem, common.ResourceThresold)
 		if !isOOR {
-			isOOR = CheckPercentage(mydc.DISK, mydc.Udisk, common.ResourseThreshold)
+			isOOR = CheckPercentage(dc.DISK, dc.Udisk, common.ResourceThresold)
 		}
 	}
 
@@ -198,13 +198,13 @@ func CheckThreshold(G *Glib, dc *common.DC) {
 
 }
 
-func CheckPercentage(MAX, USED, Threshold int) bool {
+func CheckPercentage(MAX, USED float64, Threshold int) bool {
 
-	if USED == 0 || MAX == 0 || Threshold == 0 {
+	if USED == 0.0 || MAX == 0.0 || Threshold == 0.0 {
 		return false
 	}
 
-	if ((USED / MAX) * 100) > Threshold {
+	if (int(USED/MAX) * 100) > Threshold {
 
 		return true
 	}
@@ -219,7 +219,7 @@ func GossipOOR(G *Glib) {
 
 	msg.Name = common.ThisDCName
 	msg.Type = "OOR"
-	msg.Body = &orrmsg
+	msg.Body = &oormsg
 
 	msg_bytes, err := json.Marshal(msg)
 	if err != nil {
