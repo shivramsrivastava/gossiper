@@ -9,7 +9,7 @@ import (
 
 	"./anonlib"
 	"./common"
-	"./consulLib"
+	"./consulib"
 	"./glib"
 	"./httplib"
 )
@@ -123,7 +123,8 @@ func main() {
 	//go mesoslib.Run()
 
 	//start consul client
-	go consulLib.Run(&config.ConsulConfig, config.Name)
+	//go consulLib.Run(&config.ConsulConfig, config.Name)
+	//go policylib.Run(config.ConsulConfig.StorePreFix, &config.ConsulConfig)
 
 	//Start the Policy Engine module
 	//PE.Run()
