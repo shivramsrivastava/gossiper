@@ -1,4 +1,4 @@
-package consullib
+package consulib
 
 import (
 	"log"
@@ -99,7 +99,7 @@ func NewConsulHandle(config *common.ConsulConfig) (*ConsulHandle, bool) {
 
 	if config.IsLeader == true {
 		//populate the DC maps
-		dcInfoMap = NewglobalDCMap()
+		this.DClist = NewglobalDCMap()
 		ok := this.PopulatetheGlobalDCMap()
 		if !ok {
 			log.Println("NewConsulHandle: Unable to populate consul DC's list ")
