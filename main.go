@@ -94,6 +94,8 @@ func main() {
 	common.ThisDCName = config.Name
 	common.ThisCity = config.City
 	common.ThisCountry = config.Country
+	common.ThisDCName = config.Name
+	common.ThisEP = fmt.Sprintf("http://%s:%d/v1/STATUS", config.AdvertiseAddr, config.HTTPPort)
 
 	//Start Anon TCP server module
 	go anonlib.Run(config.MasterEndPoint, config.TCPPort)
@@ -118,23 +120,9 @@ func main() {
 
 	log.Println("Marshalled output:", string(val))
 
-	//start mesos master poller
-	//go mesoslib.Run()
-
 	//start consul client
 	//go consulLib.Run(&config.ConsulConfig, config.Name)
 	//go policylib.Run(config.ConsulConfig.StorePreFix, &config.ConsulConfig)
-
-	//Start the Policy Engine module
-	//PE.Run()
-
-	/*
-		x := 1
-		for {
-			fmt.Println(string(anonlib.GetNFrameIds(x)))
-			time.Sleep(3 * time.Second)
-			x++
-		}*/
 
 	//wait for ever
 	wait := make(chan struct{})
