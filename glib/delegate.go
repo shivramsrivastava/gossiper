@@ -59,6 +59,8 @@ func (d *delegate) NotifyMsg(buf []byte) {
 			log.Printf("Delegate NotifyMsg() unmarshall OOR error %v", err)
 			return
 		}
+		log.Printf("A DC reported OOR %v", msg)
+		common.ResourceThresold <- true
 
 	case "DC":
 		var dc common.DC

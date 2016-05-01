@@ -146,7 +146,6 @@ func GetMastersResources(G *Glib, MasterEP string) {
 
 	//G.Name
 	common.ALLDCs.Lck.Lock()
-	defer common.ALLDCs.Lck.Unlock()
 	var mydc *common.DC
 	mydc, available := common.ALLDCs.List[G.Name]
 
@@ -169,9 +168,66 @@ func GetMastersResources(G *Glib, MasterEP string) {
 	mydc.Umem = uMem
 	mydc.Udisk = uDisk
 
+	common.ALLDCs.Lck.Unlock()
+
 	GossipDCInfo(G, mydc)
 
+	CheckThreshold(G, mydc)
+
 	return
+
+}
+
+func CheckThreshold(G *Glib, dc *common.DC) {
+
+	var isOOR bool
+	isOOR = CheckPercentage(mydc.CPU, mydc.Ucpu, common.ResourseThreshold)
+	if !isOOR {
+		isOOR = CheckPercentage(mydc.MEM, mydc.Umem, common.ResourseThreshold)
+		if !isOOR {
+			isOOR = CheckPercentage(mydc.DISK, mydc.Udisk, common.ResourseThreshold)
+		}
+	}
+
+	if isOOR {
+		GossipOOR(G)
+	}
+	dc.OutOfResource = isOOR
+	//Now Signal the Policy Engine to
+	common.TriggerPolicyCh <- true
+
+}
+
+func CheckPercentage(MAX, USED, Threshold int) bool {
+
+	if USED == 0 || MAX == 0 || Threshold == 0 {
+		return false
+	}
+
+	if ((USED / MAX) * 100) > Threshold {
+
+		return true
+	}
+
+	return false
+
+}
+
+func GossipOOR(G *Glib) {
+	var msg Msg
+	oormsg := OutOfResourceMsG{OOR: true}
+
+	msg.Name = common.ThisDCName
+	msg.Type = "OOR"
+	msg.Body = &orrmsg
+
+	msg_bytes, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("Unable to broadcast DC information to other gosipers Marshall error")
+	} else {
+
+		G.BroadCast(msg_bytes)
+	}
 
 }
 
@@ -197,6 +253,7 @@ func GossipFrameworks(Name string) []byte {
 	var FW FrameWorkMsG
 
 	msg.Name = Name
+	msg.Type = "FrameWorkMsG"
 
 	gmap, isvalid := AllFrameworks[Name]
 	if isvalid {
@@ -216,7 +273,7 @@ func CollectMasterData(G *Glib, MasterEP string) {
 	//First get the channels initialized
 	var FrameworkFrequency, ResourceFrequency time.Duration
 	FrameworkFrequency = 5
-	ResourceFrequency = 3
+	ResourceFrequency = 2
 	getFrameWorkCh := time.After(time.Second * FrameworkFrequency)
 	getMasterResourceCh := time.After(time.Second * ResourceFrequency)
 
