@@ -11,6 +11,7 @@ import (
 	"./common"
 	"./glib"
 	"./httplib"
+	"./policyengine"
 )
 
 type GossiperConfig struct {
@@ -116,13 +117,8 @@ func main() {
 
 	go glib.Run(config.Name, config.GPort, isnew, []string{others}, config.MasterEndPoint, config.AdvertiseAddr)
 
-	val, _ := json.Marshal(&common.ALLDCs)
-
-	log.Println("Marshalled output:", string(val))
-
-	//start consul client
-	//go consulLib.Run(&config.ConsulConfig, config.Name)
-	//go policylib.Run(config.ConsulConfig.StorePreFix, &config.ConsulConfig)
+	//Start the Policy Engine
+	go policyengine.Run(&config.ConsulConfig)
 
 	//wait for ever
 	wait := make(chan struct{})
