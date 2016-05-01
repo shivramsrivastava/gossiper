@@ -11,6 +11,7 @@ import (
 	"./common"
 	"./glib"
 	"./httplib"
+	"./policyengine"
 )
 
 type GossiperConfig struct {
@@ -125,6 +126,7 @@ func main() {
 	//go consulLib.Run(&config.ConsulConfig, config.Name)
 	//go policylib.Run(config.ConsulConfig.StorePreFix, &config.ConsulConfig)
 
+	go policyengine.Run(&config.ConsulConfig)
 	//Start the Policy Engine module
 	//PE.Run()
 
