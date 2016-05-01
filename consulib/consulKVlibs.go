@@ -1,26 +1,23 @@
-package consul
+package consullib
 
 import "log"
 
 // This functon should have all the necessary information to replicate the KV store across
 // the federated KV's
-func (this *ConsulHandle) WatchStore(blockFetch bool) (*KVData, uint64, error) {
+func (this *ConsulHandle) WatchStore(waitIndex uint64) (*KVData, uint64, error) {
 
 	log.Println("[INFO] WatchStore: called")
-	var waitIndex uint64
 	//read from local store
 	data, res, err := this.GetList(waitIndex)
 	if err == nil && data != nil {
-		log.Println("[INFO] WatchStore: Data received", waitIndex)
-		if blockFetch == true {
-			//This when set to true we need to block till the data changes
-			waitIndex = res
-		}
+		//This when set to true we need to block till the data changes
 		log.Println("[INFO] WatchStore: Data received [o/p] new-index,old-index,data", res, waitIndex, data)
 	} else {
 		log.Println("[INFO] WatchStore: KV store dosent exist")
+		return nil, waitIndex, nil
 	}
 
+	return data, res, nil
 }
 
 // THis will watch on the pre-defined store prefix and return the kv pairs

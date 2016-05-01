@@ -95,6 +95,8 @@ func NewConsulHandle(config *common.ConsulConfig) (*ConsulHandle, bool) {
 		return nil, false
 	}
 
+	this := &ConsulHandle{Client: dcClient, Name: config.DCName, IsLeader: config.IsLeader, DClist: dcInfoMap, KV: dcClient.KV(), StorePrefix: config.StorePreFix}
+
 	if config.IsLeader == true {
 		//populate the DC maps
 		dcInfoMap = NewglobalDCMap()
@@ -105,7 +107,7 @@ func NewConsulHandle(config *common.ConsulConfig) (*ConsulHandle, bool) {
 		}
 	}
 
-	return &ConsulHandle{Client: dcClient, Name: config.DCName, IsLeader: config.IsLeader, DClist: dcInfoMap, KV: dcClient.KV(), StorePrefix: config.StorePreFix}, true
+	return this, true
 }
 
 func (this *ConsulHandle) GetData(key string) []byte {
@@ -152,7 +154,7 @@ func (this *ConsulHandle) GetList(waitIndex uint64) (*KVData, uint64, error) {
 	newKVData := &KVData{}
 	newKVData.KVPairs = KeyValuelist
 	newKVData.QueryMeta = KeyValueMeta
-	log.Println("GetList: The total len of data", len(newKVData.KVPairs), KeyValuelist.Key)
+	log.Println("GetList: The total len of data", len(newKVData.KVPairs))
 	for _, val := range newKVData.KVPairs {
 
 		log.Println("Data recevived from GetList", string(val.Key), string(val.Value), val)
