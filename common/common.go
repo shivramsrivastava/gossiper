@@ -38,14 +38,24 @@ type toanon struct {
 	Lck sync.Mutex
 }
 
+//global consul config
+type ConsulConfig struct {
+	IsLeader    bool
+	DCEndpoint  string
+	StorePreFix string
+	DCName      string
+}
+
 //Declare somecommon types that will be used accorss the goroutines
 var (
-	ToAnon             toanon
-	ALLDCs             alldcs
-	ThisDCName         string
-	ThisEP             string
-	ThisCity           string
-	ThisCountry        string
+	ToAnon             toanon    //Structure Sending messages to FedComms module via TCP client
+	ALLDCs             alldcs    //The data structure that stores all the Datacenter information
+	ThisDCName         string    //This DataCenter's Name
+	ThisEP             string    //Thsi Datacenter's Endpoint
+	ThisCity           string    //This Datacenters City
+	ThisCountry        string    //This Datacentes Country
+	ResourceThresold   int       //Threshold value of any resource (CPU, MEM or Disk) after which we need to broadcast OOR
+	TriggerPolicyCh    chan bool //Polcy Engine will listen in this Channel
 	RttOfPeerGossipers rttbwGossipers
 )
 
@@ -53,16 +63,29 @@ func init() {
 
 	ToAnon.M = make(map[string]bool)
 	ToAnon.Ch = make(chan bool)
+	TriggerPolicy = make(chan bool)
 	ALLDCs.List = make(map[string]*DC)
+	ResourceThresold = 100
 	RttOfPeerGossipers.List = make(map[string]int64)
 	fmt.Printf("Initalizeing Common")
 
 }
 
-//global consul config
-type ConsulConfig struct {
-	IsLeader    bool
-	DCEndpoint  string
-	StorePreFix string
-	DCName      string
+func SupressFrameWorks() {
+	ToAnon.Lck.Lock()
+	for k, v := range ToAnon.M {
+		ToAnon.M[k] = false
+	}
+	ToAnon.Lck.Unlock()
+
+	ToAnon.Ch <- true
+}
+func UnSupressFrameWorks() {
+	ToAnon.Lck.Lock()
+	for k, v := range ToAnon.M {
+		ToAnon.M[k] = true
+	}
+	ToAnon.Lck.Unlock()
+
+	ToAnon.Ch <- true
 }

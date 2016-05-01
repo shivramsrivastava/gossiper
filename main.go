@@ -9,7 +9,6 @@ import (
 
 	"./anonlib"
 	"./common"
-	"./consulib"
 	"./glib"
 	"./httplib"
 )
