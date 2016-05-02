@@ -4,7 +4,6 @@ package policyengine
 import (
 	"encoding/json"
 	"log"
-	"strings"
 	"time"
 
 	"../common"
@@ -61,17 +60,11 @@ func (this *PE) ProcessNewPolicy(key string, data []byte) (*Policy, error) {
 
 	for index, values := range tempPolicy.Rules {
 
-		dummy := FakeJsonRuleContent{}
-		ruleType := GetCorrectRuleType(values.Name)
-		if ruleType != nil {
-			dummy.Content = ruleType
-			err := json.Unmarshal(data, &dummy)
-			if err != nil {
-				log.Println("processNewPolicy: Unable to get the content from the json")
-				return nil, err
-			}
-			tempPolicy.Rules[index].Content = dummy.Content
-			log.Println("processNewPolicy: info", tempPolicy)
+		switch values.Name {
+		case "MinMax":
+			tempPolicy.Rules[index].Content = &RuleMinMax{}
+		case "Threshold":
+			tempPolicy.Rules[index].Content = &RuleThreshold{}
 
 			if tempPolicy.Rules[index].Name == "Threshold" {
 				log.Println("ProcessNewPolicy: Got a new RuleThreshold")
@@ -86,21 +79,27 @@ func (this *PE) ProcessNewPolicy(key string, data []byte) (*Policy, error) {
 		}
 	}
 
-	return tempPolicy, nil
-}
-
-//RuleThreshold
-func GetCorrectRuleType(name string) interface{} {
-
-	if strings.Contains(name, "MinMax") == true {
-		return &RuleMinMax{}
-	} else if strings.Contains(name, "Threshold") == true {
-		return &RuleThreshold{}
-	} else {
-		log.Println("GetCorrectRuleType: No Rule Type found for", name)
+	err = json.Unmarshal(data, &tempPolicy)
+	if err != nil {
+		log.Println("processNewPolicy: Unable to get the content from the json")
+		return nil, err
 	}
-	return nil
+	log.Println("processNewPolicy: info", tempPolicy)
 
+	for index := range tempPolicy.Rules {
+		if tempPolicy.Rules[index].Name == "Threshold" {
+			log.Println("ProcessNewPolicy: Got a new RuleThreshold")
+			lruleThershold, ok := tempPolicy.Rules[index].Content.(*RuleThreshold)
+			if ok {
+				common.ResourceThresold = lruleThershold.RecosurceLimit
+				log.Println("ProcessNewPolicy: The new Threshold is ", common.ResourceThresold)
+			} else {
+				log.Println("ProcessNewPolicy: Unable to process a new RuleThreshold")
+			}
+		}
+	}
+
+	return tempPolicy, nil
 }
 
 func (this *Policy) TakeDecision() bool {
