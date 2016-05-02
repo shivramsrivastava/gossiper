@@ -95,19 +95,6 @@ func (this *PE) UpdatePolicyFromDS(config *common.ConsulConfig) {
 				}
 				this.policy = newpolicy
 
-				for _, rule := range this.policy.Rules {
-
-					if rule.Name == "Threshold" {
-						log.Println("UpdatePolicyFromDS: Got a new RuleThreshold")
-						lruleThershold, ok := rule.Content.(RuleThreshold)
-						if ok {
-							common.ResourceThresold = lruleThershold.RecosurceLimit
-							log.Println("UpdatePolicyFromDS: The new Threshold is ", common.ResourceThresold)
-						} else {
-							log.Println("UpdatePolicyFromDS: Unable to process a new RuleThreshold")
-						}
-					}
-				}
 			}
 			this.Lck.Unlock()
 		}
