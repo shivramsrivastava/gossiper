@@ -2,7 +2,6 @@ package glib
 
 import (
 	Q "container/list"
-	"fmt"
 	"log"
 	"net"
 	"time"
