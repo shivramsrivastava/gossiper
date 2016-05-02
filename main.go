@@ -96,7 +96,7 @@ func main() {
 	common.ThisCity = config.City
 	common.ThisCountry = config.Country
 	common.ThisDCName = config.Name
-	common.ThisEP = fmt.Sprintf("http://%s:%d/v1/STATUS", config.AdvertiseAddr, config.HTTPPort)
+	common.ThisEP = fmt.Sprintf("http://%s:%s/v1/STATUS", config.AdvertiseAddr, config.HTTPPort)
 
 	//Start Anon TCP server module
 	go anonlib.Run(config.MasterEndPoint, config.TCPPort)
