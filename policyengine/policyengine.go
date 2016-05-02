@@ -50,6 +50,10 @@ func (this *PE) ApplyNewPolicy() {
 
 		log.Println("ApplyNewPolicy: Called")
 
+		if this.policy == nil {
+			log.Println("ApplyNewPolicy: Cannot apply new policy since policy is nil")
+			continue
+		}
 		this.Lck.Lock()
 		ok := this.policy.TakeDecision()
 		if ok != true {
@@ -94,9 +98,13 @@ func (this *PE) UpdatePolicyFromDS(config *common.ConsulConfig) {
 				for _, rule := range this.policy.Rules {
 
 					if rule.Name == "Threshold" {
+						log.Println("UpdatePolicyFromDS: Got a new RuleThreshold")
 						lruleThershold, ok := rule.Content.(RuleThreshold)
 						if ok {
 							common.ResourceThresold = lruleThershold.RecosurceLimit
+							log.Println("UpdatePolicyFromDS: The new Threshold is ", common.ResourceThresold)
+						} else {
+							log.Println("UpdatePolicyFromDS: Unable to process a new RuleThreshold")
 						}
 					}
 				}
@@ -118,7 +126,7 @@ func getTheConsulAndDCpointers() {
 		dcDataList = common.ALLDCs.List
 		common.ALLDCs.Lck.Unlock()
 
-		if dcDataList != nil {
+		if dcDataList != nil && !common.IsCommonMapEmpty() {
 			log.Println("getTheConsulAndDCpointers: Got common.ALLDCs ", dcDataList)
 			break
 		}
@@ -126,6 +134,7 @@ func getTheConsulAndDCpointers() {
 		<-time.After(2 * time.Second)
 	}
 	log.Println("getTheConsulAndDCpointers: ")
+
 	return
 }
 

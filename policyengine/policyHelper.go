@@ -98,6 +98,10 @@ func (this *Policy) TakeDecision() bool {
 	log.Println("TakeDecision: called")
 	var ok bool
 	var ruleInterface RuleInterface
+
+	//we need to lock the gloabl common map before we take a decision on the policy
+	common.ALLDCs.Lck.Lock()
+	defer common.ALLDCs.Lck.Unlock()
 	newDecision := NewPolicyDecision()
 
 	newDecision.SortedDCName, ok = GetValidDCsInfo()

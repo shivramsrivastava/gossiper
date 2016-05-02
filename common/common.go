@@ -76,7 +76,7 @@ func SupressFrameWorks() {
 	log.Println("SupressFrameWorks: called")
 	ToAnon.Lck.Lock()
 	for k := range ToAnon.M {
-		ToAnon.M[k] = false
+		ToAnon.M[k] = true
 	}
 	ToAnon.Lck.Unlock()
 
@@ -88,11 +88,16 @@ func UnSupressFrameWorks() {
 	log.Println("UnSupressFrameWorks: called")
 	ToAnon.Lck.Lock()
 	for k := range ToAnon.M {
-		ToAnon.M[k] = true
+		ToAnon.M[k] = false
 	}
 	ToAnon.Lck.Unlock()
 
 	ToAnon.Ch <- true
 
 	log.Println("UnSupressFrameWorks: returning")
+}
+
+func IsCommonMapEmpty() bool {
+	return (len(ToAnon.M) == 0)
+
 }
