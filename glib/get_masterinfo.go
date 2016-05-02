@@ -58,13 +58,15 @@ func GetListofFrameworks(G *Glib, MasterEP string) {
 		return
 	}
 
-	this_frmwrk, exisit := AllFrameworks[G.Name]
+	//this_frmwrk, exisit := AllFrameworks[G.Name]
 	FrmWrkLck.Lock()
-	if !exisit {
-		AllFrameworks[G.Name] = make(map[string]bool)
-		this_frmwrk = AllFrameworks[G.Name]
-	}
-	FrmWrkLck.Unlock()
+	/*
+		if !exisit {
+			AllFrameworks[G.Name] = make(map[string]bool)
+			this_frmwrk = AllFrameworks[G.Name]
+		}
+	*/
+	this_frmwrk := make(map[string]bool)
 
 	for _, frwrk_interface := range frameworks_array {
 
@@ -80,9 +82,11 @@ func GetListofFrameworks(G *Glib, MasterEP string) {
 		}
 		log.Printf("framework ID %v", id)
 
-		this_frmwrk[id] = false
+		this_frmwrk[id] = true
 
 	}
+	AllFrameworks[G.Name] = this_frmwrk
+	FrmWrkLck.Unlock()
 	G.BroadCast(GossipFrameworks(G.Name))
 }
 
@@ -191,7 +195,7 @@ func CheckThreshold(G *Glib, dc *common.DC) {
 
 	if isOOR {
 		GossipOOR(G)
-	common.TriggerPolicyCh <- true
+		common.TriggerPolicyCh <- true
 	}
 	dc.OutOfResource = isOOR
 	//Now Signal the Policy Engine to
