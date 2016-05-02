@@ -120,6 +120,27 @@ func (G *Glib) BroadCast(msg []byte) error {
 
 }
 
+func (G *Glib) UpdateRTT() {
+	nodes := G.list.Members()
+
+	common.RttOfPeerGossipers.Lck.Lock()
+	defer common.RttOfPeerGossipers.Lck.Unlock()
+
+	for _, val := range nodes {
+		if G.Name != val.Name { //only to peers not self
+			duration, err := G.list.Ping(val.Name, &net.UDPAddr{IP: val.Addr, Port: (int)(val.Port)})
+			if err != nil {
+				log.Printf("g.list.Ping failed for peer :%s with err:%v", val.Name, err)
+				return
+			}
+
+			//duration in micro seconds
+			log.Printf("The rtt between this node to peer %s is %d", val.Name, duration)
+			common.RttOfPeerGossipers.List[val.Name] = (int64)(duration / time.Microsecond)
+		}
+	}
+}
+
 func Run(name string, myport int, isnew bool, others []string, masterEP string, AdvertiseAddr string) {
 
 	var wait chan struct{}
@@ -168,26 +189,4 @@ func Run(name string, myport int, isnew bool, others []string, masterEP string, 
 		}
 	}
 	<-wait
-}
-
-func (g *Glib)UpdateRTT() {
-	nodes := g.list.Members()
-
-	common.RttOfPeerGossipers.Lck.Lock()
-	defer common.RttOfPeerGossipers.Lck.Unlock()
-
-	for _, val := range nodes {
-		if g.Name != val.Name { //only to peers not self
-			duration, err := g.list.Ping(val.Name, &net.TCPAddr{IP: val.Addr, Port: (int)(val.Port)})
-			log.Printf("The rtt between this node to peer %s is %d", val.Name, duration)
-			if err != nil {
-				log.Printf("g.list.Ping failed for peer :%s with err:%s", val.Name, err)
-				return
-			}
-
-			//duration in micro seconds
-			log.Printf("The rtt between this node to peer %s is %d", val.Name, duration)
-			common.RttOfPeerGossipers.List[val.Name] = (int64)(duration / time.Microsecond)
-		}
-	}
 }
