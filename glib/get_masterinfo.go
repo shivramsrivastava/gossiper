@@ -191,10 +191,10 @@ func CheckThreshold(G *Glib, dc *common.DC) {
 
 	if isOOR {
 		GossipOOR(G)
+	common.TriggerPolicyCh <- true
 	}
 	dc.OutOfResource = isOOR
 	//Now Signal the Policy Engine to
-	common.TriggerPolicyCh <- true
 
 }
 
