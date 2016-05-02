@@ -94,6 +94,8 @@ func GetCorrectRuleType(name string) interface{} {
 func (this *Policy) TakeDecision() bool {
 
 	//create a new policy decision
+
+	log.Println("TakeDecision: called")
 	var ok bool
 	var ruleInterface RuleInterface
 	newDecision := NewPolicyDecision()
@@ -114,6 +116,7 @@ func (this *Policy) TakeDecision() bool {
 			return false
 		}
 		//this.ApplyPolicyDecisionOnRules(rule.Content)
+		log.Println("TakeDecision: Applying Rules ")
 		ok := ruleInterface.ApplyRule(newDecision)
 		if ok != true {
 			log.Println("TakeDecision: Applying rule failes", rule.Name, newDecision.SortedDCName)

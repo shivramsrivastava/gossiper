@@ -48,6 +48,8 @@ func (this *PE) ApplyNewPolicy() {
 
 		<-common.TriggerPolicyCh
 
+		log.Println("ApplyNewPolicy: Called")
+
 		this.Lck.Lock()
 		ok := this.policy.TakeDecision()
 		if ok != true {
