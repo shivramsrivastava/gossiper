@@ -24,7 +24,7 @@ func GetMatchingConsulDCInfo(dcName string) (*common.DC, bool) {
 	//dcDataList cant be null here
 	localDCdata, ok := dcDataList[dcName]
 	if true != ok {
-		log.Println("GetMatchingConsulDCInfo: there is not matching DC in common DC map")
+		log.Println("GetMatchingConsulDCInfo: there is no matching DC in common DC map for", dcName)
 		return nil, false
 	}
 	return localDCdata, true
@@ -43,20 +43,10 @@ func (this *RuleMinMax) GetnewDCarrangment(policydecision *PolicyDecision) bool 
 
 		var cpuPercentage, memPercentage float64
 
-		if gossiperDcInfo.CPU == 0 {
-			log.Println("IsCurrentDCWithInPolicyThershold: Cannot apply policy since the total CPU in DC is nil")
+		if gossiperDcInfo.CPU == 0 || gossiperDcInfo.MEM == 0 || gossiperDcInfo.DISK == 0 {
+			log.Println("GetnewDCarrangment: Cannot apply policy since the total CPU or total MEM ot DISK in", gossiperDCName, "DC is nil")
 			//return false
 			continue
-		} else if gossiperDcInfo.MEM == 0 {
-			log.Println("IsCurrentDCWithInPolicyThershold: Cannot apply policy since the total MEM in DC is nil")
-			//return false
-			continue
-
-		} else if gossiperDcInfo.DISK == 0 {
-			log.Println("IsCurrentDCWithInPolicyThershold: Cannot apply policy since the total CPU in DISK is nil")
-			//return false
-			continue
-
 		}
 		cpuPercentage = ((gossiperDcInfo.Ucpu / gossiperDcInfo.CPU) * 100)
 		memPercentage = ((gossiperDcInfo.Umem / gossiperDcInfo.MEM) * 100)
@@ -96,15 +86,16 @@ func (this *RuleMinMax) ApplyRule(policydecision *PolicyDecision) bool {
 
 	log.Println("ApplyRule: ApplyRule of the interface to RuleThreshold")
 
-	return this.GetnewDCarrangment(policydecision)
+	if ok := this.GetnewDCarrangment(policydecision); ok {
 
-	if this.MinOrMax == "MAX" {
-		log.Println("RuleMINMAX: Appying MAX", policydecision.SortValue)
-		sort.Sort(sort.Reverse(policydecision))
-		log.Println("RuleMINMAX: Appying MAX After reverse sort", policydecision.SortValue)
+		if this.MinOrMax == "MAX" {
+			log.Println("RuleMINMAX: Appying MAX", policydecision.SortValue)
+			sort.Sort(sort.Reverse(policydecision))
+			log.Println("RuleMINMAX: Appying MAX After reverse sort", policydecision.SortValue)
+		}
+
+		this.SupressoRUnSupress(policydecision)
 	}
-
-	this.SupressoRUnSupress(policydecision)
 
 	//policydecision.SortedDCName[0]
 
@@ -117,10 +108,13 @@ func (this *RuleMinMax) SupressoRUnSupress(policydecision *PolicyDecision) {
 
 	if policydecision.SortedDCName[0] == common.ThisDCName {
 		log.Println("SupressoRUnSupress: Current DC will be unspressed", policydecision.SortedDCName[0])
+		common.UnSupressFrameWorks()
+
 		//unsupress
 	} else {
 		//spress
 		log.Println("SupressoRUnSupress: Current DC will be supressed", common.ThisDCName, "DC ", policydecision.SortedDCName[0], " Will receive all offers")
+		common.SupressFrameWorks()
 	}
 
 }

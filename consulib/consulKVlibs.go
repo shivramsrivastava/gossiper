@@ -10,7 +10,7 @@ func (this *ConsulHandle) WatchStore(waitIndex uint64) (*KVData, uint64, bool) {
 	//read from local store
 	data, res, err := this.GetList(waitIndex)
 	if err == nil && data != nil {
-		log.Println("[INFO] WatchStore: Data received [o/p] new-index,old-index,data", res, waitIndex, data)
+		log.Println("[INFO] WatchStore: Data received [o/p] new-index,old-index,data", res, waitIndex, data.KVPairs)
 	} else {
 		log.Println("[INFO] WatchStore: KV store dosent exist", err)
 		return nil, waitIndex, false
@@ -34,7 +34,7 @@ func (this *ConsulHandle) ReplicateStore(data *KVData) error {
 		for _, kvpair := range data.KVPairs {
 			err := this.PutData(kvpair.Key, kvpair.Value, dcName)
 			if err != nil {
-				log.Println("ReplicateStore: Failed to send data to", dcName)
+				log.Println("ReplicateStore: Failed to send data to", dcName, this.DClist.AvalibleDCInfo[dcName])
 				return err
 
 			}
