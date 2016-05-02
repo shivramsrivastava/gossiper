@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	"../common"
 )
 
 // All rule typr must implement this rule
@@ -71,6 +73,16 @@ func (this *PE) ProcessNewPolicy(key string, data []byte) (*Policy, error) {
 			tempPolicy.Rules[index].Content = dummy.Content
 			log.Println("processNewPolicy: info", tempPolicy)
 
+			if tempPolicy.Rules[index].Name == "Threshold" {
+				log.Println("ProcessNewPolicy: Got a new RuleThreshold")
+				lruleThershold, ok := tempPolicy.Rules[index].Content.(RuleThreshold)
+				if ok {
+					common.ResourceThresold = lruleThershold.RecosurceLimit
+					log.Println("ProcessNewPolicy: The new Threshold is ", common.ResourceThresold)
+				} else {
+					log.Println("ProcessNewPolicy: Unable to process a new RuleThreshold")
+				}
+			}
 		}
 	}
 
@@ -94,8 +106,14 @@ func GetCorrectRuleType(name string) interface{} {
 func (this *Policy) TakeDecision() bool {
 
 	//create a new policy decision
+
+	log.Println("TakeDecision: called")
 	var ok bool
 	var ruleInterface RuleInterface
+
+	//we need to lock the gloabl common map before we take a decision on the policy
+	common.ALLDCs.Lck.Lock()
+	defer common.ALLDCs.Lck.Unlock()
 	newDecision := NewPolicyDecision()
 
 	newDecision.SortedDCName, ok = GetValidDCsInfo()
@@ -114,6 +132,7 @@ func (this *Policy) TakeDecision() bool {
 			return false
 		}
 		//this.ApplyPolicyDecisionOnRules(rule.Content)
+		log.Println("TakeDecision: Applying Rules ")
 		ok := ruleInterface.ApplyRule(newDecision)
 		if ok != true {
 			log.Println("TakeDecision: Applying rule failes", rule.Name, newDecision.SortedDCName)

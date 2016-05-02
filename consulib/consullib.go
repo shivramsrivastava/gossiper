@@ -132,7 +132,7 @@ func (this *ConsulHandle) PutData(key string, value []byte, dcName string) error
 	//writeMeta
 
 	wop := &api.WriteOptions{Datacenter: dcName}
-	_, err := this.Put(&api.KVPair{Key: this.StorePrefix + "/" + key, Value: value}, wop)
+	_, err := this.Put(&api.KVPair{Key: key, Value: value}, wop)
 	if err != nil {
 		log.Println("PutData: Error Unable to put data to", this.Name, err, *this.Client)
 		return err

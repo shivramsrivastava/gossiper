@@ -92,6 +92,9 @@ func (this *RuleMinMax) ApplyRule(policydecision *PolicyDecision) bool {
 			log.Println("RuleMINMAX: Appying MAX", policydecision.SortValue)
 			sort.Sort(sort.Reverse(policydecision))
 			log.Println("RuleMINMAX: Appying MAX After reverse sort", policydecision.SortValue)
+		} else {
+			log.Println("RuleMINMAX: Appying Min", policydecision.SortValue)
+
 		}
 
 		this.SupressoRUnSupress(policydecision)
