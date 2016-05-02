@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"../common"
 )
 
 // All rule typr must implement this rule
