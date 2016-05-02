@@ -93,17 +93,21 @@ func ConnectToServer() {
 func DailtoServer() {
 
 	flagChan := make(chan bool)
+	log.Println("DailtoServer: called")
 	//Bind to all the network inteface int the system on the same port
 	tcpServer, err := net.Dial("tcp", ServerAddr+":"+ServerPort)
 	if err != nil {
-		log.Println(" Unable to connect to the server", err)
+		log.Println("DailtoServer: Unable to connect to the server", err)
 		return
 	}
 	newAnonClientConn := NewaAnonConnection()
+	log.Println("DailtoServer: Starting all the go routine")
 	go newAnonClientConn.SendMsg(tcpServer, flagChan)
 	go newAnonClientConn.RecvMsg(tcpServer, flagChan)
 	go newAnonClientConn.SendHeartBeat(tcpServer, flagChan)
 	<-flagChan
+	log.Println("DailtoServer: flagChan received should abort here")
+
 	//free the socket
 
 	return
@@ -177,7 +181,7 @@ func Run(inBindAddress string, inBindPort string) {
 	ServerPort = "5555"
 
 	log.Println("Starting the anonlib ")
-	log.Println("The master anon tcp server is", ServerAddr)
+	log.Println("The master anon tcp server is", ServerAddr, ServerPort)
 
 	go ConnectToServer()
 }

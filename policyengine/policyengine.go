@@ -65,6 +65,8 @@ func (this *PE) ApplyNewPolicy() {
 func (this *PE) UpdatePolicyFromDS(config *common.ConsulConfig) {
 	for {
 
+		log.Println("UpdatePolicyFromDS: called")
+
 		data, resultingIndex, ok := this.WatchStore(this.Current_DS_Index)
 
 		if ok && (this.Current_DS_Index < resultingIndex) {
@@ -86,10 +88,20 @@ func (this *PE) UpdatePolicyFromDS(config *common.ConsulConfig) {
 					log.Println("UpdatePolicyFromDS: ProcessNewPolicy failes to ", err)
 				}
 				this.policy = newpolicy
+
+				for _, rule := range this.policy.Rules {
+
+					if rule.Name == "Threshold" {
+						lruleThershold, ok := rule.Content.(RuleThreshold)
+						if ok {
+							common.ResourceThresold = lruleThershold.RecosurceLimit
+						}
+					}
+				}
 			}
 			this.Lck.Unlock()
 		}
-		time.Sleep(5 * time.Second)
+		//time.Sleep(5 * time.Second)
 	}
 
 }
@@ -119,6 +131,8 @@ func getTheConsulAndDCpointers() {
 //
 func (this *PE) BootStrapPolicy(config *common.ConsulConfig) {
 
+	log.Println("BootStrapPolicy: Called")
+
 	data, resultingIndex, ok := this.WatchStore(this.Current_DS_Index)
 
 	if ok && (this.Current_DS_Index < resultingIndex) {
@@ -128,6 +142,10 @@ func (this *PE) BootStrapPolicy(config *common.ConsulConfig) {
 			if err != nil {
 				log.Fatalln("BootStrapPolicy: Data replication failed", err)
 			}
+
+			//Since this gosspier is the leader he will unsupress the framewokrs
+			log.Println("BootStrapPolicy: calling the Unsupress")
+			common.UnSupressFrameWorks()
 		}
 		//set the new ModifiedIndex
 		this.Current_DS_Index = resultingIndex
@@ -138,18 +156,22 @@ func (this *PE) BootStrapPolicy(config *common.ConsulConfig) {
 				log.Println("BootStrapPolicy: ProcessNewPolicy failes to ", err)
 			}
 			this.policy = newpolicy
-			ok := this.policy.TakeDecision()
-			if ok != true {
-				log.Println("BootStrapPolicy: TakeDecision on new policy ", this.policy.Name, " failed")
-			}
+			//parse and keep the policy dont take decision now
+
 		}
 
+	} else {
+		log.Fatalln("BootStrapPolicy: Failed to read from the store. Aborting")
 	}
+
+	log.Println("BootStrapPolicy: returning from BootStrapPolicy")
 
 }
 
 //Entry point for the policy engine
 func Run(config *common.ConsulConfig) {
+
+	log.Println("Run: PolicyEngine run called")
 
 	getTheConsulAndDCpointers()
 

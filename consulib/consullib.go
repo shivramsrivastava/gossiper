@@ -64,8 +64,11 @@ func (this *ConsulHandle) PopulatetheGlobalDCMap() bool {
 	}
 
 	for index, member := range dcMembers {
-		if member.Name != localDCName {
-			newname := strings.Split(member.Name, ".")[1]
+		//Buf Fix
+		newname := strings.Split(member.Name, ".")[1]
+		if newname != localDCName {
+
+			log.Println("PopulatetheGlobalDCMap: updating localDc dc name used", localDCName, member.Name, newname)
 			this.DClist.AvalibleDCInfo[newname] = dcMembers[index]
 		} else {
 			log.Println("PopulatetheGlobalDCMap: Skipping localDc ", localDCName, member.Name)
@@ -87,11 +90,11 @@ func NewConsulHandle(config *common.ConsulConfig) (*ConsulHandle, bool) {
 	defaultConfig.Datacenter = config.DCName
 	defaultConfig.Address = config.DCEndpoint
 
-	log.Println("[INFO]NewFederaConsulClient:", defaultConfig)
+	log.Println("[INFO]NewConsulHandle:", defaultConfig)
 
 	dcClient, err := api.NewClient(defaultConfig)
 	if err != nil {
-		log.Println("NewFederaConsulClient: Cannot connect to the Consul Server ", err)
+		log.Println("NewConsulHandle: Cannot connect to the Consul Server ", err)
 		return nil, false
 	}
 
@@ -139,7 +142,7 @@ func (this *ConsulHandle) PutData(key string, value []byte, dcName string) error
 
 func (this *ConsulHandle) GetList(waitIndex uint64) (*KVData, uint64, error) {
 
-	log.Println("GetList waitindex ", waitIndex)
+	log.Println("GetList waitindex ", waitIndex, this.StorePrefix)
 
 	q := &api.QueryOptions{}
 	q.WaitIndex = waitIndex

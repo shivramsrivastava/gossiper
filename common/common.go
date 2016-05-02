@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -72,20 +73,26 @@ func init() {
 }
 
 func SupressFrameWorks() {
+	log.Println("SupressFrameWorks: called")
 	ToAnon.Lck.Lock()
-	for k, _ := range ToAnon.M {
+	for k := range ToAnon.M {
 		ToAnon.M[k] = false
 	}
 	ToAnon.Lck.Unlock()
 
 	ToAnon.Ch <- true
+	log.Println("SupressFrameWorks: returning")
+
 }
 func UnSupressFrameWorks() {
+	log.Println("UnSupressFrameWorks: called")
 	ToAnon.Lck.Lock()
-	for k, _ := range ToAnon.M {
+	for k := range ToAnon.M {
 		ToAnon.M[k] = true
 	}
 	ToAnon.Lck.Unlock()
 
 	ToAnon.Ch <- true
+
+	log.Println("UnSupressFrameWorks: returning")
 }

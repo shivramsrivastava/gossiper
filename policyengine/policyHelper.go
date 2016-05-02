@@ -6,9 +6,7 @@ import (
 	"log"
 	"strings"
 	"time"
-
 )
-
 
 // All rule typr must implement this rule
 type RuleInterface interface {
@@ -143,6 +141,7 @@ func GetValidDCsInfo() ([]string, bool) {
 			dcDataSortedList = append(dcDataSortedList, key)
 		}
 	}
+	log.Println("GetValidDCsInfo: Valid DC's  from which the Policy decision is made", dcDataSortedList)
 	return dcDataSortedList, true
 
 }
