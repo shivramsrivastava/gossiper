@@ -66,6 +66,16 @@ func (this *PE) ProcessNewPolicy(key string, data []byte) (*Policy, error) {
 		case "Threshold":
 			tempPolicy.Rules[index].Content = &RuleThreshold{}
 
+			if tempPolicy.Rules[index].Name == "Threshold" {
+				log.Println("ProcessNewPolicy: Got a new RuleThreshold")
+				lruleThershold, ok := tempPolicy.Rules[index].Content.(RuleThreshold)
+				if ok {
+					common.ResourceThresold = lruleThershold.RecosurceLimit
+					log.Println("ProcessNewPolicy: The new Threshold is ", common.ResourceThresold)
+				} else {
+					log.Println("ProcessNewPolicy: Unable to process a new RuleThreshold")
+				}
+			}
 		}
 	}
 
