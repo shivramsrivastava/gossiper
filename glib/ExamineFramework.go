@@ -9,8 +9,9 @@ import (
 
 func PerformIntersection() {
 
-	log.Printf("PerformIntersection() Sent to TCP cannel")
+	log.Printf("PerformIntersection() Started ")
 	FrmWrkLck.Lock()
+	CommonFramework = make(map[string]bool)
 	for mk, mv := range AllFrameworks {
 		for n, _ := range mv {
 			isCommon := true
@@ -30,12 +31,20 @@ func PerformIntersection() {
 	FrmWrkLck.Unlock()
 
 	common.ToAnon.Lck.Lock()
-	for k, v := range CommonFramework {
-		common.ToAnon.M[k] = v
+	for k, _ := range CommonFramework {
+		if _, okay := common.ToAnon.M[k]; !okay {
+			common.ToAnon.M[k] = true
+		}
 
 	}
+	//Now remove those frameworks that re not common anymore
+	for k, _ := range common.ToAnon.M {
+		if _, okay := CommonFramework[k]; !okay {
+			delete(common.ToAnon.M, k)
+		}
+	}
 	common.ToAnon.Lck.Unlock()
-	log.Printf("PerformIntersection() Sent to TCP cannel")
+	log.Printf("PerformIntersection() Finished")
 	common.ToAnon.Ch <- true
 }
 

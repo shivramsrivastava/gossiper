@@ -38,10 +38,13 @@ func (d *delegate) NotifyMsg(buf []byte) {
 		}
 
 		//First check if the Daacenter entry is available otherwise remove it
+		/*
 		this_frmwrk, isvalid := AllFrameworks[msg.Name]
 		if !isvalid {
 			this_frmwrk = make(map[string]bool)
 		}
+		*/
+		this_frmwrk := make(map[string]bool)
 
 		//Loop through the frameworks
 		for _, n := range FW.FrameWorks {

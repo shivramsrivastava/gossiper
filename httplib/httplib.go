@@ -49,7 +49,6 @@ func (this *MainController) LatencyAll() {
 		return
 	}
 	this.Ctx.WriteString(string(resp_byte))
-	log.Printf("HTTP Latency Response %s", string(resp_byte))
 }
 func (this *MainController) StatusAll() {
 	var res StatusResponse
