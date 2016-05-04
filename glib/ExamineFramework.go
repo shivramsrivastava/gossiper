@@ -9,8 +9,9 @@ import (
 
 func PerformIntersection() {
 
-	log.Printf("PerformIntersection() Sent to TCP cannel")
+	log.Printf("PerformIntersection() Started ")
 	FrmWrkLck.Lock()
+	CommonFramework = make(map[string]bool)
 	for mk, mv := range AllFrameworks {
 		for n, _ := range mv {
 			isCommon := true
@@ -43,7 +44,7 @@ func PerformIntersection() {
 		}
 	}
 	common.ToAnon.Lck.Unlock()
-	log.Printf("PerformIntersection() Sent to TCP cannel")
+	log.Printf("PerformIntersection() Finished")
 	common.ToAnon.Ch <- true
 }
 
